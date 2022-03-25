@@ -379,9 +379,9 @@ describe Inspec::ProfileContext do
     it "supports simple ruby require statements" do
       # Please note: we do discourage the use of Gems in inspec resources at
       # this time. Resources should be well packaged whenever possible.
-      _ { profile.load("Net::POP3") }.must_raise NameError
-      profile.load_libraries([['require "net/pop"', "libraries/a.rb"]])
-      _(profile.load("Net::POP3").to_s).must_equal "Net::POP3"
+      _ { profile.load("Byebug") }.must_raise NameError
+      profile.load_libraries([['require "byebug"', "libraries/a.rb"]])
+      _(profile.load("Byebug").to_s).must_equal "Byebug"
     end
 
     it "supports creating a simple library file (no require)" do
