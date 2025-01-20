@@ -32,7 +32,7 @@ module Inspec::Resources
     end
 
     def families
-      @platform[:family_hierarchy]
+      @platform[:family_hierarchy] || []
     end
 
     def name
@@ -48,12 +48,12 @@ module Inspec::Resources
     end
 
     def platform?(name)
-      @platform.name == name ||
-        @platform.family_hierarchy.include?(name)
+      @platform[:name] == name ||
+        @platform[:family_hierarchy].include?(name)
     end
 
     def in_family?(family)
-      @platform.family_hierarchy.include?(family)
+      @platform[:family_hierarchy].include?(family)
     end
 
     def params
@@ -92,7 +92,7 @@ module Inspec::Resources
     end
 
     def resource_id
-      @platform.name || 'platform'
+      @platform[:name] || 'platform'
     end
 
     def to_s
