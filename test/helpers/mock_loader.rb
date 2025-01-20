@@ -41,6 +41,8 @@ class MockLoader
               version: { major: 17, minor: 3, patch: nil, build: nil } },
     mint18: { name: 'linuxmint', family: 'debian', release: '18', arch: 'x86_64',
               version: { major: 18, minor: nil, patch: nil, build: nil } },
+    ubuntu: { name: 'ubuntu', family: 'debian', release: '22.04', arch: 'x86_64',
+              version: { major: 22, minor: 4, patch: nil, build: nil } },
     ubuntu2204: { name: 'ubuntu', family: 'debian', release: '22.04', arch: 'x86_64',
                   version: { major: 22, minor: 4, patch: nil, build: nil } },
     ubuntu1404: { name: 'ubuntu', family: 'debian', release: '14.04', arch: 'x86_64',
