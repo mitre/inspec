@@ -26,7 +26,7 @@ module Inspec::Resources
     def self.parse_version(version_string)
       OSVersion.new(version_string)
     rescue ArgumentError
-      OSVersion.new('0.0.0')
+      OSVersion.new("0.0.0")
     end
 
     def self.version_info(version)
@@ -34,7 +34,7 @@ module Inspec::Resources
         major: version_attr(version, :major),
         minor: version_attr(version, :minor),
         patch: version_attr(version, :patch),
-        build: version_attr(version, :build)
+        build: version_attr(version, :build),
       }
     end
 

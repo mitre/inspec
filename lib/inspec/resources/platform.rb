@@ -1,10 +1,10 @@
-require 'inspec/resource'
-require 'inspec/resources/platform_helper'
+require "inspec/resource"
+require "inspec/resources/platform_helper"
 
 module Inspec::Resources
   class PlatformResource < Inspec.resource(1)
-    name 'platform'
-    desc 'Use the platform InSpec resource to test the platform on which the system is running.'
+    name "platform"
+    desc "Use the platform InSpec resource to test the platform on which the system is running."
     example <<~EXAMPLE
       describe platform do
         its('name') { should eq 'redhat' }
@@ -57,19 +57,21 @@ module Inspec::Resources
     end
 
     def params
+      # rubocop:disable Style/HashSyntax
+      # rubocop:disable Layout/HashAlignment
       h = {
-        name:,
-        families:,
-        release:,
-        arch:
+        name:     name,
+        families: families,
+        release:  release,
+        arch:     arch,
       }
-      h.delete :arch if in_family?('api') # not applicable if api
+      h.delete :arch if in_family?("api") # not applicable if api
 
       h
     end
 
     def supported?(supports)
-      raise ArgumentError, '`supports` is nil.' unless supports
+      raise ArgumentError, "`supports` is nil." unless supports
 
       supports.any? do |support|
         support.all? do |k, v|
@@ -88,15 +90,15 @@ module Inspec::Resources
     end
 
     def normalize(key)
-      key.to_s.tr('-', '_').to_sym
+      key.to_s.tr("-", "_").to_sym
     end
 
     def resource_id
-      @platform[:name] || 'platform'
+      @platform[:name] || "platform"
     end
 
     def to_s
-      'Platform Detection'
+      "Platform Detection"
     end
 
     def fetch_version
