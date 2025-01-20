@@ -30,6 +30,7 @@ gem "ffi", ">= 1.15.5", "< 1.17.0"
 gem "rspec", ">= 3.10"
 
 gem "rubocop", require: false
+gem "train-vmware"
 
 group :omnibus do
   gem "appbundler"
