@@ -29,11 +29,13 @@ gem "ffi", ">= 1.15.5", "< 1.17.0"
 # but our runtime dep is still 3.9+
 gem "rspec", ">= 3.10"
 
+gem "rubocop", require: false
+
 group :omnibus do
-  gem "rb-readline"
   gem "appbundler"
-  gem "ed25519" # ed25519 ssh key support done here as its a native gem we can't put in the gemspec
   gem "bcrypt_pbkdf" # ed25519 ssh key support done here as its a native gem we can't put in the gemspec
+  gem "ed25519" # ed25519 ssh key support done here as its a native gem we can't put in the gemspec
+  gem "rb-readline"
 end
 
 group :test do
@@ -41,12 +43,12 @@ group :test do
   gem "concurrent-ruby"
   gem "json_schemer"
   gem "m"
-  gem "minitest-sprint", "~> 1.0"
   gem "minitest", "5.15.0"
+  gem "minitest-sprint", "~> 1.0"
   gem "mocha"
   gem "nokogiri"
-  gem "pry-byebug"
   gem "pry"
+  gem "pry-byebug"
   gem "rake"
   gem "simplecov"
   gem "simplecov_json_formatter"
