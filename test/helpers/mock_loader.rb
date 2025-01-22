@@ -785,12 +785,12 @@ class MockLoader
   end
 
   # loads a resource class and instantiates the class with the given arguments
-  def load_resource(resource, *args)
-    # initialize resource with backend and parameters
-    @resource_class = Inspec::Resource.registry[resource]
-    raise ArgumentError, "No resource #{resource}" unless @resource_class
-
-    @resource = @resource_class.new(backend, resource, *args)
+  def load_resource(res, *args)
+    # Force a fresh backend or platform if needed
+    # For example:
+    # Inspec::Backend.create(Train.create('mock', ...))
+    inspec = Inspec::Runner.new.configure_transport(backend_name: "mock")
+    inspec.dsl.mock_resource(res, *args)
   end
 
   def self.mock_os(resource, name)

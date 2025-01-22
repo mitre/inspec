@@ -20,6 +20,10 @@ module Inspec::Resources
       end
     EXAMPLE
 
+    def initialize
+      @platform = inspec.backend.platform
+    end
+
     # reuse helper methods from backend
     %w{aix? redhat? debian? suse? bsd? solaris? linux? unix? windows? hpux? darwin?}.each do |os_family|
       define_method(os_family.to_sym) do
