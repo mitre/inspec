@@ -45,50 +45,41 @@ module Inspec::Resources
 
       def <=>(other)
         other_version = convert_to_version(other)
-        # TODO: try to make this conditional on a debug flag
-        # puts "Comparing #{@version} with #{other_version}"
         @version <=> other_version
       end
 
       def eql?(other)
         other_version = convert_to_version(other)
-        # puts "Comparing #{@version} with #{other_version}"
         @version.eql?(other_version)
       end
 
       def ==(other)
         other_version = convert_to_version(other)
-        # puts "Comparing #{@version} with #{other_version}"
         @version == other_version
       end
 
       def ===(other)
         other_version = convert_to_version(other)
-        # puts "Comparing #{@version} with #{other_version}"
         @version === other_version
       end
 
       def <=(other)
         other_version = convert_to_version(other)
-        # puts "Comparing #{@version} with #{other_version}"
         @version <= other_version
       end
 
       def >=(other)
         other_version = convert_to_version(other)
-        # puts "Comparing #{@version} with #{other_version}"
         @version >= other_version
       end
 
       def <(other)
         other_version = convert_to_version(other)
-        # puts "Comparing #{@version} with #{other_version}"
         @version < other_version
       end
 
       def >(other)
         other_version = convert_to_version(other)
-        # puts "Comparing #{@version} with #{other_version}"
         @version > other_version
       end
 
@@ -153,12 +144,18 @@ module Inspec::Resources
         arch
       when :family_hierarchy
         families
+      else
+        @platform[key]
       end
     end
 
     def platform?(name)
-      platform.name == name ||
-        platform.family_hierarchy.include?(name)
+      if name.is_a?(String) && name.include?('*')
+        regex = Regexp.new('^' + Regexp.escape(name).gsub('\\*', '.*') + '$')
+        platform.name =~ regex || platform.family_hierarchy.any? { |family| family =~ regex }
+      else
+        platform.name == name || platform.family_hierarchy.include?(name)
+      end
     end
 
     def in_family?(family)
@@ -196,9 +193,11 @@ module Inspec::Resources
           when :os, :platform
             platform?(v)
           when :os_name, :platform_name
-            check_name(v)
+            platform?(v)
           when :release
             check_release(v)
+          else
+            false # Handle unexpected keys gracefully
           end
         end
       end || supports.empty?

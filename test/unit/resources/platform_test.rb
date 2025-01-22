@@ -39,7 +39,7 @@ describe 'Inspec::Resources::Platform' do
     _(resource.platform?('mac_os_x')).must_equal false
   end
 
-  it 'verify family? responds correctly' do
+  it 'verify in_family? responds correctly' do
     _(resource.in_family?('windows')).must_equal false
     _(resource.in_family?('unix')).must_equal true
     _(resource.in_family?('ubuntu')).must_equal false
@@ -113,27 +113,21 @@ describe 'Inspec::Resources::Platform' do
       Inspec::Resources::PlatformResource.reset_shared_platform
     end
 
-    let(:windows_resource) { MockLoader.new(:windows2016).load_resource('platform') }
+    let(:windows_resource) { MockLoader.new(:windows_server_2016_datacenter).load_resource('platform') }
 
     it 'loads a profile which supports platform-name windows_server_2016*' do
-      Inspec::Resources::PlatformResource.reset_shared_platform
-      resource = MockLoader.new(:windows2016).load_resource('platform')
       supports = [{ 'platform-name' => 'windows_server_2016*' }]
-      _(resource).must_be :supported?, supports
+      _(windows_resource).must_be :supported?, supports
     end
 
     it 'loads a profile which supports platform-name *2016*' do
-      Inspec::Resources::PlatformResource.reset_shared_platform
-      resource = MockLoader.new(:windows2016).load_resource('platform')
       supports = [{ 'platform-name' => '*2016*' }]
-      _(resource).must_be :supported?, supports
+      _(windows_resource).must_be :supported?, supports
     end
 
     it 'reject a profile which supports platform-name not matching regex windows_server_2016*' do
-      Inspec::Resources::PlatformResource.reset_shared_platform
-      resource = MockLoader.new(:windows2016).load_resource('platform')
       supports = [{ 'platform-name' => '*2019*' }]
-      _(resource).wont_be :supported?, supports
+      _(windows_resource).wont_be :supported?, supports
     end
   end
 end

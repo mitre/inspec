@@ -122,10 +122,22 @@ module Inspec::Resources
 
     def [](key)
       # convert string to symbol
-      key = key.to_sym if key is_a? String
+      key = key.to_sym if key.is_a?(String)
       return name if key == :name
 
-      @platform[key]
+      # For other keys, retrieve them directly from the Train platform object:
+      case key
+      when :family
+        family
+      when :release
+        release
+      when :arch
+        arch
+      when :family_hierarchy
+        families
+      else
+        @platform[key]
+      end
     end
 
     def platform?(name)
