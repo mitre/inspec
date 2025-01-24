@@ -1,0 +1,35 @@
+# Content from /etc/sudoers
+Defaults !authenticate
+Defaults !targetpw
+Defaults !rootpw  
+Defaults !runaspw
+Defaults timestamp_timeout=0
+Defaults env_reset
+Defaults mail_badpass
+Defaults env_keep="HOME, MAIL"
+
+# Host alias specification
+Host_Alias  SERVERS = server1, server2
+Host_Alias WEBSERVERS = www1, www2
+
+# User alias specification
+User_Alias ADMINS = admin, wheel
+User_Alias DBAS = dba1, dba2
+
+# Cmnd alias specification
+Cmnd_Alias SOFTWARE = /bin/rpm, /usr/bin/up2date
+Cmnd_Alias SERVICES = /usr/sbin/service, /usr/bin/systemctl
+
+# User privilege specification
+root    ALL=(ALL:ALL) ALL
+admin   ALL=(ALL)   NOPASSWD: ALL 
+%wheel  ALL=(ALL)   ALL
+dba     db1=(oracle) /usr/bin/sqlplus
+www-data WEBSERVERS=(www) /usr/sbin/nginx
+user1   ALL=(root) /usr/bin/passwd
+
+# Content from /etc/sudoers.d/custom
+Defaults custom_setting="value"
+User_Alias CUSTOM_USERS = custom1, custom2
+Cmnd_Alias CUSTOM_COMMANDS = /usr/local/bin/custom_command
+custom1 ALL=(ALL) NOPASSWD: CUSTOM_COMMANDS

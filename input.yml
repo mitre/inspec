@@ -1,0 +1,6 @@
+---
+sudoers_config_files:
+- '/etc/sudoers'
+- '/etc/sudoers.d/*'
+passwordless_admins:
+- 'r701-staff'
