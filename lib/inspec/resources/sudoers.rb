@@ -1,4 +1,5 @@
 module Inspec::Resources
+  # This class is responsible for filtering and managing sudoers rules.
   class SudoersRulesFilter
     filter = FilterTable.create
     filter.register_custom_matcher(:exists?) { |x| !x.entries.empty? }
@@ -21,6 +22,7 @@ module Inspec::Resources
     end
   end
 
+  # This class is responsible for filtering and managing sudoers settings.
   class SudoersSettingsFilter
     filter = FilterTable.create
     filter.register_custom_matcher(:exists?) { |x| !x.entries.empty? }
@@ -39,6 +41,7 @@ module Inspec::Resources
     end
   end
 
+  # This class represents the sudoers resource in InSpec, used to test sudo configuration.
   class Sudoers < Inspec.resource(1)
     name 'sudoers'
     supports platform: 'unix'
@@ -66,6 +69,7 @@ module Inspec::Resources
     IGNORED_DIRECTIVES = ['#includedir'].freeze
 
     def initialize(sudoers_files = nil)
+      super()
       @sudoers_files = [sudoers_files || default_sudoers_path].flatten
       Inspec::Log.debug("sudoers_files: #{@sudoers_files}")
 
@@ -92,13 +96,12 @@ module Inspec::Resources
 
     # Helper methods
     def authenticate?
-      setting = settings.where(name: '!authenticate')
-      setting && setting.entries.any? ? true : false
+      settings.Defaults.include?('!authenticate')
     end
 
     def timeout_value
-      timeout = settings.where(name: 'timestamp_timeout')
-      timeout && timeout.entries.any? ? timeout.values.first.to_i : nil
+      timeout = settings.Defaults['timestamp_timeout']
+      timeout ? timeout.first.to_i : nil
     end
 
     def timeout_value?
@@ -151,7 +154,7 @@ module Inspec::Resources
       Inspec::Log.debug("raw_content: #{@raw_content}")
       @lines = @raw_content.lines.reject do |line|
                  line.nil? || line.match(/^#(?!include)|^\s*$/) || IGNORED_DIRECTIVES.any? do |directive|
- line.include?(directive)
+                   line.include?(directive)
                  end
       end.map(&:strip)
       Inspec::Log.debug("lines: #{@lines}")
@@ -163,6 +166,8 @@ module Inspec::Resources
       userspec_lines = @lines.reject { |line| line.match(/^(#{aliases.join('|')})/) }
       Inspec::Log.debug("settings_lines: #{settings_lines}")
       Inspec::Log.debug("userspec_lines: #{userspec_lines}")
+      # TODO: The resource is currently trying to access this like its a filter table from the
+      # SudoersRulesFilter class. This is incorrect and should be fixed.
       @settings = settings_hash(settings_lines) # Store as instance var
       @table = SudoersUserSpecTable.new(userspec_lines)
       Inspec::Log.debug("@table: #{@table.table}")
@@ -191,6 +196,7 @@ module Inspec::Resources
   end
 end
 
+# This class is responsible for parsing and filtering user specifications in the sudoers file.
 class SudoersUserSpecTable
   FilterTable.create
              .register_column(:users, field: :users)
