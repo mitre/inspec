@@ -82,6 +82,49 @@ Defaults:DBAS oracle_home=/u01/app/oracle
 # Complex settings combinations
 Defaults>root umask=022
 
+# Complex RunAs specifications
+admin1  ALL=(operator:wheel) /usr/bin/su
+admin2  ALL=(ALL:ALL) NOPASSWD: ALL
+admin3  ALL=(root:wheel, operator:ops) /usr/bin/su
+
+# Special case wildcards and escapes
+dev_*   ALL=(ALL) /usr/bin/\ls
+admin\* ALL=(ALL) /usr/bin/id
+
+# Command line arguments
+admin   ALL=(ALL) NOPASSWD: /usr/bin/kill -9
+admin   ALL=(ALL) NOPASSWD: /usr/bin/passwd [A-Za-z]*
+
+# Complex Defaults
+Defaults:FULLTIMERS timestamp_timeout=0
+Defaults:PARTTIMERS timestamp_timeout=4
+Defaults!PAGERS noexec
+Defaults>REMOTE_CMDS log_output
+Defaults:ADMINS timestamp_timeout=0, passwd_tries=1
+
+# Complex command specifications
+admin   ALL=(root) NOPASSWD:NOEXEC: /usr/bin/less
+admin   ALL=(ALL) NOPASSWD: sudoedit /etc/*/[a-z]*
+admin   ALL=(ALL) NOPASSWD: /usr/bin/vim /[a-z]*/*, /usr/bin/nano /[a-z]*/config
+
+# DoS prevention rules test
+Defaults        maxseq=2147483647
+Defaults        passwd_timeout=15
+Defaults        passwd_tries=3
+
+# Environment settings
+Defaults env_keep += "COLORS DISPLAY HOSTNAME HISTSIZE"
+Defaults env_keep += "KDEDIR LS_COLORS"
+Defaults env_keep -= "IFS CDPATH LOCALDOMAIN"
+
+# Multiple tags on one line
+Defaults        log_year, logfile=/var/log/sudo.log, log_host, loglinelen=0
+Defaults        env_reset, timestamp_timeout=30
+
+# Quoted values with embedded commas and escaped quotes
+Defaults env_keep="XDG_*, LANG, LANGUAGE, LINGUAS, LC_*, _XKB_CHARSET"
+Defaults editor="/usr/bin/vim:\"/usr/bin/vim.basic\""
+
 # Sample command output
 # Reading the sudoers file
 # visudo -c

@@ -8,6 +8,11 @@ Defaults env_reset
 Defaults mail_badpass
 Defaults env_keep="HOME, MAIL"
 
+# Test case for very long lines with multiple continuations
+Defaults env_keep += "DISPLAY XAUTHORITY XAUTHORIZATION XAPPLRESDIR \
+    XUSERFILESEARCHPATH XFILESEARCHPATH PATH_LOCALE NLSPATH \
+    HOSTALIASES PRINTER LPDEST NETRC"
+
 # Host alias specification
 Host_Alias  SERVERS = server1, server2
 Host_Alias WEBSERVERS = www1, www2
@@ -20,6 +25,11 @@ User_Alias DBAS = dba1, dba2
 Cmnd_Alias SOFTWARE = /bin/rpm, /usr/bin/up2date
 Cmnd_Alias SERVICES = /usr/sbin/service, /usr/bin/systemctl
 
+# Test for command aliases with more complex paths
+Cmnd_Alias \
+    SHELLS = /bin/sh, /bin/bash, /bin/tcsh, /bin/zsh, \
+    /bin/ksh, /bin/mksh, /bin/pdksh
+
 # User privilege specification
 root    ALL=(ALL:ALL) ALL
 admin   ALL=(ALL)   NOPASSWD: ALL 
@@ -27,6 +37,18 @@ admin   ALL=(ALL)   NOPASSWD: ALL
 dba     db1=(oracle) /usr/bin/sqlplus
 www-data WEBSERVERS=(www) /usr/sbin/nginx
 user1   ALL=(root) /usr/bin/passwd
+
+# Test case for different uses of ALL keyword
+ALL ALL=(ALL:ALL) ALL
++staff ALL=(ALL) ALL
+%sudo ALL=(ALL:ALL) NOPASSWD: ALL
+
+# Test case for forced commands
+admin ALL=(root) NOEXEC: /usr/bin/sudoedit /etc/motd
+backup ALL=(ALL) NOPASSWD: /usr/bin/rsync --server *
+
+# Test case for negation in user/host lists
+user1 ALL,!SERVER1=(ALL) ALL
 
 # Content from /etc/sudoers.d/custom
 Defaults custom_setting="value"

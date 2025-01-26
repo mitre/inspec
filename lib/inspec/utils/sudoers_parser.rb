@@ -24,20 +24,30 @@ class SudoersParser
   def parse_entries(lines)
     entries = []
     current_entry = []
+    in_continuation = false
 
     lines.each do |line|
       line = strip_comments(line).strip
       next if line.empty?
 
+      # Handle line continuations with proper whitespace preservation
       if line.end_with?('\\')
-        current_entry << line.chomp('\\')
-      else
+        in_continuation = true
+        current_entry << line.chomp('\\').strip
+      elsif in_continuation
         current_entry << line
-        entries << parse_entry(current_entry.join(' ').strip)
-        current_entry = []
+        unless line.end_with?('\\')
+          entries << parse_entry(current_entry.join(' ').strip)
+          current_entry = []
+          in_continuation = false
+        end
+      else
+        entries << parse_entry(line)
       end
     end
 
+    # Handle any remaining entries
+    entries << parse_entry(current_entry.join(' ').strip) unless current_entry.empty?
     entries.compact
   end
 
@@ -84,6 +94,22 @@ class SudoersParser
   end
 
   def parse_default_values_with_operator(settings)
+    # Handle multi-line quoted values first
+    if settings =~ /^(.+?)\s*([+\-]?=)\s*"([^"]+(?:\\.[^"]+)*)"$/
+      key = Regexp.last_match(1).strip
+      operator = Regexp.last_match(2).strip
+      value = Regexp.last_match(3)
+
+      # Unescape quotes and newlines
+      value = value.gsub(/\\(.)/) { Regexp.last_match(1) }
+
+      return [{
+        key:,
+        value:,
+        operator:
+      }]
+    end
+
     # Handle quoted values with commas first
     if settings =~ /^(.+?)\s*([+\-]?=)\s*"([^"]+)"$/
       return [{
@@ -165,8 +191,9 @@ class SudoersParser
   def parse_user_list(users)
     users.split(/,\s*/).map do |user|
       {
-        name: user.sub(/^%/, ''),
-        is_group: user.start_with?('%')
+        name: user.sub(/^%/, '').gsub(/[\\*]/, ''), # Remove % and escape chars for name
+        is_group: user.start_with?('%'),
+        original: user.strip # Preserve original with wildcards and escapes
       }
     end
   end
@@ -200,18 +227,84 @@ class SudoersParser
       command = command.sub(/^\((.*?)\)\s*/, '')
     end
 
+    # Parse command and arguments while preserving quotes and patterns
+    parts = if command.include?('"') || command.include?("'")
+              parse_quoted_command(command)
+            else
+              command.split(/\s+/)
+            end
+
+    base_command = parts.first
+    arguments = parts[1..] || []
+
     {
       command:,
+      base_command:,
+      arguments:,
       tags:,
       runas: runas ? parse_runas_spec(runas) : nil
     }
   end
 
+  def parse_quoted_command(command)
+    parts = []
+    current = ''
+    in_quotes = false
+    quote_char = nil
+
+    command.each_char do |c|
+      case c
+      when '"', "'"
+        if !in_quotes
+          in_quotes = true
+          quote_char = c
+        elsif quote_char == c
+          in_quotes = false
+          quote_char = nil
+        else
+          current << c
+        end
+      when ' '
+        if in_quotes
+          current << c
+        else
+          parts << current unless current.empty?
+          current = ''
+        end
+      else
+        current << c
+      end
+    end
+
+    parts << current unless current.empty?
+    parts
+  end
+
   def parse_runas_spec(spec)
-    users, groups = spec.split(':', 2).map(&:strip)
+    specs = spec.include?(',') ? spec.split(/,\s*/) : [spec]
+
+    all_users = []
+    all_groups = []
+    original_users = []
+    original_groups = []
+
+    specs.each do |single_spec|
+      users, groups = single_spec.split(':', 2).map(&:strip)
+
+      parsed_users = users ? users.split(',').map(&:strip) : ['ALL']
+      parsed_groups = groups ? groups.split(',').map(&:strip) : []
+
+      all_users.concat(parsed_users.map { |u| u.gsub(/[\\*]/, '') })
+      all_groups.concat(parsed_groups.map { |g| g.gsub(/[\\*]/, '') })
+      original_users.concat(parsed_users)
+      original_groups.concat(parsed_groups)
+    end
+
     {
-      users: users ? users.split(',').map(&:strip) : ['ALL'],
-      groups: groups ? groups.split(',').map(&:strip) : []
+      users: all_users.uniq,
+      groups: all_groups.uniq,
+      original_users: original_users.uniq,
+      original_groups: original_groups.uniq
     }
   end
 end
