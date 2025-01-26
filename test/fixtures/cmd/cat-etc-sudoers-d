@@ -55,3 +55,12 @@ Defaults custom_setting="value"
 User_Alias CUSTOM_USERS = custom1, custom2
 Cmnd_Alias CUSTOM_COMMANDS = /usr/local/bin/custom_command
 custom1 ALL=(ALL) NOPASSWD: CUSTOM_COMMANDS
+
+# Special case wildcards and escapes
+dev_*   ALL=(ALL) /usr/bin/\ls
+admin\* ALL=(ALL) /usr/bin/id
+
+# Environment settings test cases
+Defaults env_keep += "COLORS DISPLAY HOSTNAME HISTSIZE"
+Defaults env_keep += "KDEDIR LS_COLORS"
+Defaults env_keep -= "IFS CDPATH LOCALDOMAIN"

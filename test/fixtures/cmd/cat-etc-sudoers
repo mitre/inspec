@@ -1,4 +1,4 @@
-# Defaults settings
+# Main sudoers configuration
 Defaults !authenticate
 Defaults !targetpw
 Defaults !rootpw  
@@ -9,28 +9,44 @@ Defaults mail_badpass
 Defaults env_keep="HOME, MAIL"
 Defaults secure_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
-# Host alias specification
+# Primary alias specifications
 Host_Alias  SERVERS = server1, server2
 Host_Alias WEBSERVERS = www1, www2
 Host_Alias DBSERVERS = db1, db2, db3
 
-# User alias specification
 User_Alias ADMINS = admin, wheel
 User_Alias DBAS = dba1, dba2
 User_Alias WEBMASTERS = www-admin1, www-admin2
 
-# Cmnd alias specification
 Cmnd_Alias SOFTWARE = /bin/rpm, /usr/bin/up2date
 Cmnd_Alias SERVICES = /usr/sbin/service, /usr/bin/systemctl
 Cmnd_Alias STORAGE = /sbin/fdisk, /sbin/parted
 Cmnd_Alias VAGRANT = /usr/bin/vagrant
 Cmnd_Alias DOCKER = /usr/bin/docker
 
-# User privilege specification
+# Main user specifications
 root    ALL=(ALL:ALL) ALL
 admin   ALL=(ALL)   NOPASSWD: ALL, /usr/bin/mysql
 %wheel  ALL=(ALL)   ALL
 dba     db1=(oracle) /usr/bin/sqlplus
+
+# Complex RunAs specifications
+admin1  ALL=(operator:wheel) /usr/bin/su
+admin2  ALL=(ALL:ALL) NOPASSWD: ALL
+admin3  ALL=(root:wheel, operator:ops) /usr/bin/su
+
+# Complex command specifications
+admin   ALL=(root) NOPASSWD:NOEXEC: /usr/bin/less
+admin   ALL=(ALL) NOPASSWD: sudoedit /etc/*/[a-z]*
+admin   ALL=(ALL) NOPASSWD: /usr/bin/vim /[a-z]*/*, /usr/bin/nano /[a-z]*/config
+
+# Main Defaults specifications
+Defaults>STORAGE umask=027
+Defaults!SERVICES env_reset
+Defaults:operator>SERVICES !log_output
+Defaults@WEBSERVERS ssl_verify
+
+# User privilege specification
 www-data WEBSERVERS=(www) /usr/sbin/nginx
 user1   ALL=(root) /usr/bin/passwd
 www-data ALL=(ALL) LOG_OUTPUT: /usr/sbin/nginx
@@ -64,28 +80,15 @@ Defaults:backup compress_io, log_output
 Defaults:poweruser env_keep+="DOCKER_HOST DOCKER_CERT_PATH"
 Defaults:security !authenticate, log_input, log_output, requiretty
 
-# Command-specific defaults
-Defaults>STORAGE umask=027
-
 # Negated command-specific defaults
-Defaults!SERVICES env_reset
 
 # User and command specific defaults
-Defaults:operator>SERVICES !log_output
-
-# Host-specific defaults
-Defaults@WEBSERVERS ssl_verify
 
 # Group-specific defaults
 Defaults:DBAS oracle_home=/u01/app/oracle
 
 # Complex settings combinations
 Defaults>root umask=022
-
-# Complex RunAs specifications
-admin1  ALL=(operator:wheel) /usr/bin/su
-admin2  ALL=(ALL:ALL) NOPASSWD: ALL
-admin3  ALL=(root:wheel, operator:ops) /usr/bin/su
 
 # Special case wildcards and escapes
 dev_*   ALL=(ALL) /usr/bin/\ls
@@ -101,11 +104,6 @@ Defaults:PARTTIMERS timestamp_timeout=4
 Defaults!PAGERS noexec
 Defaults>REMOTE_CMDS log_output
 Defaults:ADMINS timestamp_timeout=0, passwd_tries=1
-
-# Complex command specifications
-admin   ALL=(root) NOPASSWD:NOEXEC: /usr/bin/less
-admin   ALL=(ALL) NOPASSWD: sudoedit /etc/*/[a-z]*
-admin   ALL=(ALL) NOPASSWD: /usr/bin/vim /[a-z]*/*, /usr/bin/nano /[a-z]*/config
 
 # DoS prevention rules test
 Defaults        maxseq=2147483647

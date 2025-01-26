@@ -25,20 +25,20 @@ class SudoersParser
     entries = []
     current_entry = []
     in_continuation = false
+    joined_line = ''
 
     lines.each do |line|
       line = strip_comments(line).strip
       next if line.empty?
 
-      # Handle line continuations with proper whitespace preservation
       if line.end_with?('\\')
         in_continuation = true
-        current_entry << line.chomp('\\').strip
+        joined_line += line.chomp('\\') + ' '
       elsif in_continuation
-        current_entry << line
+        joined_line += line
         unless line.end_with?('\\')
-          entries << parse_entry(current_entry.join(' ').strip)
-          current_entry = []
+          entries << parse_entry(joined_line.strip)
+          joined_line = ''
           in_continuation = false
         end
       else
@@ -46,8 +46,7 @@ class SudoersParser
       end
     end
 
-    # Handle any remaining entries
-    entries << parse_entry(current_entry.join(' ').strip) unless current_entry.empty?
+    entries << parse_entry(joined_line.strip) if in_continuation
     entries.compact
   end
 
@@ -99,9 +98,7 @@ class SudoersParser
       key = Regexp.last_match(1).strip
       operator = Regexp.last_match(2).strip
       value = Regexp.last_match(3)
-
-      # Unescape quotes and newlines
-      value = value.gsub(/\\(.)/) { Regexp.last_match(1) }
+      value = value.gsub(/\\(.)/, '\1') # Unescape special chars
 
       return [{
         key:,
@@ -110,17 +107,8 @@ class SudoersParser
       }]
     end
 
-    # Handle quoted values with commas first
-    if settings =~ /^(.+?)\s*([+\-]?=)\s*"([^"]+)"$/
-      return [{
-        key: Regexp.last_match(1).strip,
-        value: Regexp.last_match(3).strip,
-        operator: Regexp.last_match(2).strip
-      }]
-    end
-
     # Then handle multiple settings
-    settings.split(/,\s*/).map do |setting|
+    settings.split(/,\s*(?=(?:[^"]*"[^"]*")*[^"]*$)/).map do |setting|
       setting = setting.strip
       case setting
       when /^(.+?)\s*\+=\s*(.+)$/
@@ -227,18 +215,21 @@ class SudoersParser
       command = command.sub(/^\((.*?)\)\s*/, '')
     end
 
-    # Parse command and arguments while preserving quotes and patterns
-    parts = if command.include?('"') || command.include?("'")
-              parse_quoted_command(command)
-            else
-              command.split(/\s+/)
-            end
+    # Parse command and arguments while preserving patterns
+    if command.include?('"') || command.include?("'")
+      parts = parse_quoted_command(command)
+    elsif command.include?('[') || command.include?('*') # Handle patterns
+      base, *patterns = command.split(/(\s+(?:\[.*?\]|\*+))/).reject(&:empty?)
+      parts = [base, *patterns]
+    else
+      parts = command.split(/\s+(?=(?:[^\\]|^)(?:\\{2})*$)/) # Split on unescaped spaces
+    end
 
-    base_command = parts.first
-    arguments = parts[1..] || []
+    base_command = parts.first&.gsub(/\\(.)/, '\1') # Unescape command
+    arguments = parts[1..]&.map { |arg| arg.strip.gsub(/\\(.)/, '\1') } || [] # Unescape args
 
     {
-      command:,
+      command: command.strip,
       base_command:,
       arguments:,
       tags:,
@@ -281,7 +272,8 @@ class SudoersParser
   end
 
   def parse_runas_spec(spec)
-    specs = spec.include?(',') ? spec.split(/,\s*/) : [spec]
+    # Handle multiple RunAs specifications with groups
+    specs = spec.include?(',') ? spec.split(/,(?![^()]*\))/) : [spec]
 
     all_users = []
     all_groups = []
@@ -290,12 +282,11 @@ class SudoersParser
 
     specs.each do |single_spec|
       users, groups = single_spec.split(':', 2).map(&:strip)
-
       parsed_users = users ? users.split(',').map(&:strip) : ['ALL']
       parsed_groups = groups ? groups.split(',').map(&:strip) : []
 
-      all_users.concat(parsed_users.map { |u| u.gsub(/[\\*]/, '') })
-      all_groups.concat(parsed_groups.map { |g| g.gsub(/[\\*]/, '') })
+      all_users.concat(parsed_users.map { |u| u.gsub(/\\/, '') }) # Preserve wildcards
+      all_groups.concat(parsed_groups.map { |g| g.gsub(/\\/, '') })
       original_users.concat(parsed_users)
       original_groups.concat(parsed_groups)
     end
