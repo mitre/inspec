@@ -7,26 +7,80 @@ Defaults timestamp_timeout=0
 Defaults env_reset
 Defaults mail_badpass
 Defaults env_keep="HOME, MAIL"
+Defaults secure_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
 # Host alias specification
 Host_Alias  SERVERS = server1, server2
 Host_Alias WEBSERVERS = www1, www2
+Host_Alias DBSERVERS = db1, db2, db3
 
 # User alias specification
 User_Alias ADMINS = admin, wheel
 User_Alias DBAS = dba1, dba2
+User_Alias WEBMASTERS = www-admin1, www-admin2
 
 # Cmnd alias specification
 Cmnd_Alias SOFTWARE = /bin/rpm, /usr/bin/up2date
 Cmnd_Alias SERVICES = /usr/sbin/service, /usr/bin/systemctl
+Cmnd_Alias STORAGE = /sbin/fdisk, /sbin/parted
+Cmnd_Alias VAGRANT = /usr/bin/vagrant
+Cmnd_Alias DOCKER = /usr/bin/docker
 
 # User privilege specification
 root    ALL=(ALL:ALL) ALL
-admin   ALL=(ALL)   NOPASSWD: ALL 
+admin   ALL=(ALL)   NOPASSWD: ALL, /usr/bin/mysql
 %wheel  ALL=(ALL)   ALL
 dba     db1=(oracle) /usr/bin/sqlplus
 www-data WEBSERVERS=(www) /usr/sbin/nginx
 user1   ALL=(root) /usr/bin/passwd
+www-data ALL=(ALL) LOG_OUTPUT: /usr/sbin/nginx
+
+# Logging and execution control rules
+Cmnd_Alias LOGGED_COMMANDS = /usr/bin/passwd, /usr/bin/mount
+auditor ALL=(ALL) LOG_INPUT: /usr/bin/cat, LOG_OUTPUT: /usr/bin/less
+admin ALL=(ALL) LOG_INPUT: LOG_OUTPUT: LOGGED_COMMANDS
+admin ALL=(ALL) LOG_INPUT: /usr/bin/mysql
+developer ALL=(ALL) NOEXEC: /usr/bin/less, /usr/bin/more
+
+# Test cases for helper methods
+admin ALL=(ALL) NOPASSWD: /usr/bin/su, /usr/bin/sudo
+developer ALL=(ALL) NOEXEC: /usr/bin/vim, /usr/bin/nano
+poweruser ALL=(ALL) SETENV: /usr/bin/docker
+
+# Multi-tag test cases
+dbadmin ALL=(ALL) LOG_INPUT: NOPASSWD: /usr/bin/mysql
+security ALL=(ALL) LOG_INPUT: LOG_OUTPUT: NOEXEC: /usr/bin/tcpdump
+backup ALL=(ALL) NOPASSWD: NOEXEC: /usr/bin/tar
+
+# User-specific defaults - testing various formats
+Defaults:root umask=027
+Defaults:operator log_output
+Defaults:admin secure_path="/usr/local/sbin:/usr/bin"
+Defaults:dba env_keep+=ORACLE_HOME
+Defaults:www-data !authenticate, umask=022
+Defaults:developer env_reset, secure_path="/usr/local/bin:/usr/bin", umask=022
+Defaults:auditor log_output, log_year, logfile=/var/log/sudo.log
+Defaults:backup compress_io, log_output
+Defaults:poweruser env_keep+="DOCKER_HOST DOCKER_CERT_PATH"
+Defaults:security !authenticate, log_input, log_output, requiretty
+
+# Command-specific defaults
+Defaults>STORAGE umask=027
+
+# Negated command-specific defaults
+Defaults!SERVICES env_reset
+
+# User and command specific defaults
+Defaults:operator>SERVICES !log_output
+
+# Host-specific defaults
+Defaults@WEBSERVERS ssl_verify
+
+# Group-specific defaults
+Defaults:DBAS oracle_home=/u01/app/oracle
+
+# Complex settings combinations
+Defaults>root umask=022
 
 # Sample command output
 # Reading the sudoers file
