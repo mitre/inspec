@@ -1,6 +1,5 @@
 require 'inspec/resource'
 require 'rubygems/version'
-require 'logger'
 
 module Inspec::Resources
   class PlatformResource < Inspec.resource(1)
@@ -16,27 +15,25 @@ module Inspec::Resources
       end
     EXAMPLE
 
-    # rubocop:disable Style/Documentation
-    class Version
-      def initialize(version_string, build_version = nil)
-        @version = Gem::Version.new(version_string)
-        @build_version = build_version
+    class Version < Gem::Version
+      def initialize(version_string)
+        super(version_string)
       end
 
       def major
-        @version.segments[0]
+        segments[0]
       end
 
       def minor
-        @version.segments[1]
+        segments[1]
       end
 
       def patch
-        @version.segments[2]
+        segments[2]
       end
 
       def build
-        @build_version || (@version.segments.size > 3 ? @version.segments[3..-1].join('.') : nil)
+        segments[3..-1].join('.') if segments.size > 3
       end
 
       def to_s
@@ -45,92 +42,86 @@ module Inspec::Resources
 
       def <=>(other)
         other_version = convert_to_version(other)
+        puts "Comparing #{@version} with #{other_version}"
         @version <=> other_version
       end
 
       def eql?(other)
         other_version = convert_to_version(other)
+        puts "Comparing #{@version} with #{other_version}"
         @version.eql?(other_version)
       end
 
       def ==(other)
         other_version = convert_to_version(other)
+        puts "Comparing #{@version} with #{other_version}"
         @version == other_version
       end
 
       def ===(other)
         other_version = convert_to_version(other)
+        puts "Comparing #{@version} with #{other_version}"
         @version === other_version
       end
 
       def <=(other)
         other_version = convert_to_version(other)
+        puts "Comparing #{@version} with #{other_version}"
         @version <= other_version
       end
 
       def >=(other)
         other_version = convert_to_version(other)
+        puts "Comparing #{@version} with #{other_version}"
         @version >= other_version
       end
 
       def <(other)
         other_version = convert_to_version(other)
+        puts "Comparing #{@version} with #{other_version}"
         @version < other_version
       end
 
       def >(other)
         other_version = convert_to_version(other)
+        puts "Comparing #{@version} with #{other_version}"
         @version > other_version
       end
 
       private
 
       def convert_to_version(value)
-        value = format('%.2f', value) if value.is_a? Numeric
+        value = format('%.2f', value) if value.is_a?(Numeric)
         Gem::Version.new(value.to_s)
       end
     end
 
-    # store a single shared platform
-    @shared_platform = nil
-
-    def self.reset_shared_platform
-      @shared_platform = nil
-    end
-
     def initialize
-      # only query backend once
-      unless self.class.instance_variable_get(:@shared_platform)
-        self.class.instance_variable_set(:@shared_platform, inspec.backend.platform.tap do |plat|
-          # puts "Initialized platform: #{plat.inspect}"
-        end)
-      end
-      @platform = self.class.instance_variable_get(:@shared_platform)
+      @platform = inspec.backend.platform
     end
-
-    attr_reader :platform
 
     def family
-      platform.family
+      @platform[:family]
     end
 
     def release
-      platform.release
+      @platform[:release]
     end
 
     def arch
-      platform.arch
+      @platform[:arch]
     end
 
     def families
-      platform.family_hierarchy
+      @platform[:family_hierarchy]
     end
 
     def name
-      platform.name
+      @platform[:name]
     end
 
     def [](key)
+      # convert string to symbol
       key = key.to_sym if key.is_a?(String)
       return name if key == :name
 
@@ -150,29 +141,24 @@ module Inspec::Resources
     end
 
     def platform?(name)
-      if name.is_a?(String) && name.include?('*')
-        regex = Regexp.new('^' + Regexp.escape(name).gsub('\\*', '.*') + '$')
-        platform.name =~ regex || platform.family_hierarchy.any? { |family| family =~ regex }
-      else
-        platform.name == name || platform.family_hierarchy.include?(name)
-      end
+      @platform.name == name ||
+        @platform.family_hierarchy.include?(name)
     end
 
     def in_family?(family)
-      platform.family_hierarchy.include?(family)
+      @platform.family_hierarchy.include?(family)
     end
 
     def version
       Version.new(release)
     end
 
-    # rubocop:disable Style/HashSyntax
     def params
       {
-        name: name,
-        families: families,
-        release: release,
-        arch: arch,
+        name:,
+        families:,
+        release:,
+        arch:,
         version: {
           major: version.major,
           minor: version.minor,
@@ -193,23 +179,20 @@ module Inspec::Resources
           when :os, :platform
             platform?(v)
           when :os_name, :platform_name
-            platform?(v)
+            check_name(v)
           when :release
             check_release(v)
-          else
-            false # Handle unexpected keys gracefully
           end
         end
       end || supports.empty?
     end
 
-    # TODO: dumb... push this up or remove need
-    def normalize(key)
+    def normalize(key) # TODO: dumb... push this up or remove need
       key.to_s.tr('-', '_').to_sym
     end
 
     def resource_id
-      platform.name || 'platform'
+      @platform.name || 'platform'
     end
 
     def to_s
@@ -220,7 +203,7 @@ module Inspec::Resources
 
     def check_name(value)
       # allow wild card matching
-      if value.include?('*')
+      if value include?('*')
         cleaned = Regexp.escape(value).gsub('\*', '.*?')
         name =~ /#{cleaned}/
       else
@@ -230,7 +213,7 @@ module Inspec::Resources
 
     def check_release(value)
       # allow wild card matching
-      if value.include?('*')
+      if value include?('*')
         cleaned = Regexp.escape(value).gsub('\*', '.*?')
         release =~ /#{cleaned}/
       else

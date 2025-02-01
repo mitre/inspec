@@ -2,8 +2,14 @@ require "helper"
 require "inspec/resource"
 require "inspec/resources/os"
 
+# rubocop:disable Metrics/BlockLength
 describe "Inspec::Resources::Os" do
+  before do
+    Inspec::Resources::PlatformResource.reset_shared_platform
+  end
+
   it "verify os parsing on CentOS" do
+    Inspec::Resources::PlatformResource.reset_shared_platform
     resource = MockLoader.new(:centos7).load_resource("os")
     _(resource.resource_id).must_equal "centos"
     _(resource.name).must_equal "centos"
@@ -13,6 +19,7 @@ describe "Inspec::Resources::Os" do
   end
 
   it "read env variable on Windows" do
+    Inspec::Resources::PlatformResource.reset_shared_platform
     resource = MockLoader.new(:windows).load_resource("os")
     _(resource.resource_id).must_equal "windows"
     _(resource.name).must_equal "windows"
@@ -22,6 +29,7 @@ describe "Inspec::Resources::Os" do
   end
 
   it "verify os parsing on Debian" do
+    Inspec::Resources::PlatformResource.reset_shared_platform
     resource = MockLoader.new(:debian8).load_resource("os")
     _(resource.resource_id).must_equal "debian"
     _(resource.name).must_equal "debian"
@@ -31,6 +39,7 @@ describe "Inspec::Resources::Os" do
   end
 
   it "verify os parsing on Ubuntu" do
+    Inspec::Resources::PlatformResource.reset_shared_platform
     resource = MockLoader.new(:ubuntu).load_resource("os")
     _(resource.name).must_equal "ubuntu"
     _(resource.family).must_equal "debian"
@@ -39,6 +48,7 @@ describe "Inspec::Resources::Os" do
   end
 
   it "verify os parsing on Mint" do
+    Inspec::Resources::PlatformResource.reset_shared_platform
     resource = MockLoader.new(:mint18).load_resource("os")
     _(resource.name).must_equal "linuxmint"
     _(resource.family).must_equal "debian"
