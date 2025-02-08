@@ -1,8 +1,8 @@
-$LOAD_PATH.unshift File.expand_path('../lib', __dir__)
-require 'rspec'
-require 'parslet'
-require 'parslet/rig/rspec'
-require 'parslet/convenience'  # Add this line for Parslet's RSpec matchers
+$LOAD_PATH.unshift File.expand_path("../lib", __dir__)
+require "rspec"
+require "parslet"
+require "parslet/rig/rspec"
+require "parslet/convenience"  # Add this line for Parslet's RSpec matchers
 
 RSpec.configure do |config|
   config.expect_with :rspec do |expectations|

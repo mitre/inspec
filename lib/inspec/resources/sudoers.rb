@@ -1,16 +1,16 @@
-require 'forwardable'
-require 'inspec/utils/sudoers_parser'
+require "forwardable" unless defined?(Forwardable)
+require "inspec/utils/sudoers_parser"
 
 module Inspec::Resources
   class Sudoers < Inspec.resource(1)
-    name 'sudoers'
-    supports platform: 'unix'
-    supports platform: 'darwin'
-    supports platform: 'freebsd'
-    supports platform: 'solaris'
-    supports platform: 'aix'
+    name "sudoers"
+    supports platform: "unix"
+    supports platform: "darwin"
+    supports platform: "freebsd"
+    supports platform: "solaris"
+    supports platform: "aix"
 
-    desc 'Use the sudoers InSpec audit resource to test the configuration of sudo.'
+    desc "Use the sudoers InSpec audit resource to test the configuration of sudo."
     example <<~EXAMPLE
       describe sudoers do
         its('parsed_data') { should_not be_empty }
@@ -28,7 +28,7 @@ module Inspec::Resources
     end
 
     def to_s
-      "Sudoers Configuration #{@sudoers_files.join(', ')}"
+      "Sudoers Configuration #{@sudoers_files.join(", ")}"
     end
 
     def resource_id
@@ -38,10 +38,10 @@ module Inspec::Resources
     private
 
     def load_content
-      @raw_content = inspec.command("cat #{@sudoers_files.join(' ')}").stdout
+      @raw_content = inspec.command("cat #{@sudoers_files.join(" ")}").stdout
       if @raw_content.empty?
-        Inspec::Log.warn("Failed to load content from sudoers files: #{@sudoers_files.join(', ')}")
-        skip_resource 'Failed to load content from sudoers files.'
+        Inspec::Log.warn("Failed to load content from sudoers files: #{@sudoers_files.join(", ")}")
+        skip_resource "Failed to load content from sudoers files."
       end
       Inspec::Log.debug("raw_content: #{@raw_content}")
     end
@@ -56,16 +56,16 @@ module Inspec::Resources
 
     def default_sudoers_path
       path = case inspec.os.name
-             when 'darwin'
-               '/private/etc/sudoers'
-             when 'freebsd'
-               '/usr/local/etc/sudoers'
-             when 'solaris'
-               '/etc/opt/sudoers'
-             when 'aix'
-               '/etc/security/sudoers'
+             when "darwin"
+               "/private/etc/sudoers"
+             when "freebsd"
+               "/usr/local/etc/sudoers"
+             when "solaris"
+               "/etc/opt/sudoers"
+             when "aix"
+               "/etc/security/sudoers"
              else
-               '/etc/sudoers'
+               "/etc/sudoers"
              end
 
       Inspec::Log.warn("Default sudoers path #{path} does not exist.") unless inspec.file(path).exist?

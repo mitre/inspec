@@ -1,4 +1,5 @@
 require 'pry'  # Add for debugging
+require 'logger'
 
 class SudoersParser
   class ParserError < StandardError; end
@@ -7,23 +8,32 @@ class SudoersParser
   ALIAS_TYPES = %w[User_Alias Runas_Alias Host_Alias Cmnd_Alias].freeze
   TAGS = %w[NOPASSWD PASSWD NOEXEC EXEC SETENV NOSETENV LOG_INPUT LOG_OUTPUT MAIL NOMAIL].freeze
   OPERATORS = %w[+= -= =].freeze # Add operators list
+  KNOWN_TAGS = %w[NOPASSWD PASSWD NOEXEC EXEC SETENV NOSETENV LOG_INPUT NOLOG_INPUT LOG_OUTPUT NOLOG_OUTPUT MAIL
+                  NOMAIL].freeze
 
-  def initialize(content = nil)
+  def initialize(content = nil, logger = nil)
     @content = content
+    @parsed_data = [] # Initialize parsed_data array
+    @logger = logger || Logger.new($stdout).tap do |log|
+      log.level = ENV['DEBUG'] ? Logger::DEBUG : Logger::INFO
+      log.formatter = proc do |severity, datetime, _, msg|
+        "[#{datetime.strftime('%Y-%m-%d %H:%M:%S')}] #{severity}: #{msg}\n"
+      end
+    end
   end
 
   def parse(content = nil)
     @content = content if content
     raise ParserError, 'No content provided' unless @content
 
-    parse_entries(@content.split("\n"))
+    @parsed_data = parse_entries(@content.split("\n")) # Store parsed entries
+    @parsed_data # Return parsed data
   end
 
   private
 
   def parse_entries(lines)
     entries = []
-    current_entry = []
     in_continuation = false
     joined_line = ''
 
@@ -33,7 +43,7 @@ class SudoersParser
 
       if line.end_with?('\\')
         in_continuation = true
-        joined_line += line.chomp('\\') + ' '
+        joined_line += "#{line.chomp('\\')} "
       elsif in_continuation
         joined_line += line
         unless line.end_with?('\\')
@@ -89,7 +99,7 @@ class SudoersParser
     return nil unless type
 
     target = qualifier.sub(type, '').strip
-    { type:, target: }
+    { type: type, target: target } # rubocop:disable Style/HashSyntax
   end
 
   def parse_default_values_with_operator(settings)
@@ -101,9 +111,9 @@ class SudoersParser
       value = value.gsub(/\\(.)/, '\1') # Unescape special chars
 
       return [{
-        key:,
-        value:,
-        operator:
+        key: key, # rubocop:disable Style/HashSyntax
+        value: value, # rubocop:disable Style/HashSyntax
+        operator: operator # rubocop:disable Style/HashSyntax
       }]
     end
 
@@ -165,15 +175,176 @@ class SudoersParser
   def parse_user_spec(line)
     return nil unless line.include?('=')
 
-    users, hosts, specs = line.split('=', 2).first.strip.split(/\s+/, 2)
-    commands = line.split('=', 2).last.strip
+    # Split into users, hosts, and remaining spec
+    parts = line.match(/^(\S+)\s+([^=]+?)=(.+)$/)
+    return nil unless parts
+
+    users, hosts, remaining = parts.captures
+
+    # Extract RunAs and commands from remaining
+    runas = nil
+    commands = remaining
+
+    # Handle RunAs specification
+    if remaining =~ /^\s*\(([^)]+)\)\s*(.+)$/
+      runas = Regexp.last_match(1)
+      commands = Regexp.last_match(2)
+    end
 
     {
       type: :user_spec,
       users: parse_user_list(users),
       hosts: parse_host_list(hosts || 'ALL'),
-      commands: parse_command_list(commands)
+      commands: parse_command_list(commands, runas)
     }
+  end
+
+  def parse_command_list(commands, runas = nil)
+    commands.split(/,\s*/).map do |cmd|
+      parse_command_spec(cmd.strip, runas)
+    end
+  end
+
+  def parse_command_spec(spec, runas = nil)
+    command = spec.strip
+    found_tags = []
+
+    @logger.debug("Command Spec Processing - Input spec: #{spec.inspect}")
+
+    # Extract tags in order of appearance
+    original_spec = command.dup
+    while original_spec.match(/(\w+):/)
+      tag = Regexp.last_match(1)
+      if KNOWN_TAGS.include?(tag)
+        found_tags << tag
+        original_spec.sub!(/#{tag}:/, '') # Remove the matched tag
+      else
+        @logger.warn("Unknown tag found: #{tag}")
+      end
+      original_spec = original_spec.strip
+    end
+
+    command = original_spec.strip
+    @logger.debug("Found tags: #{found_tags.inspect}")
+    @logger.debug("Command after tag removal: #{command}")
+
+    # Parse command and arguments
+    parts = if command.include?('"') || command.include?("'")
+              parse_quoted_command(command)
+            else
+              parse_pattern_command(command)
+            end
+
+    base_command = parts.first&.gsub(/\\(.)/, '\1')
+    arguments = parts.length > 1 ? parts[1..-1].map { |arg| arg.strip.gsub(/\\(.)/, '\1') } : []
+
+    # Check for command alias resolution
+    if command_alias = resolve_command_alias(base_command)
+      @logger.debug("Found command alias: #{base_command} -> #{command_alias.inspect}")
+      {
+        command: command, # rubocop:disable Style/HashSyntax
+        base_command: base_command, # rubocop:disable Style/HashSyntax
+        arguments: arguments, # rubocop:disable Style/HashSyntax
+        tags: found_tags,
+        runas: runas ? parse_runas_spec(runas) : nil,
+        resolved_commands: command_alias
+      }
+    else
+      @logger.debug("No command alias found for: #{base_command}")
+      {
+        command: command, # rubocop:disable Style/HashSyntax
+        base_command: base_command, # rubocop:disable Style/HashSyntax
+        arguments: arguments, # rubocop:disable Style/HashSyntax
+        tags: found_tags,
+        runas: runas ? parse_runas_spec(runas) : nil
+      }
+    end
+  end
+
+  def resolve_command_alias(command_name)
+    return nil unless command_name
+
+    @logger.debug("Looking up command alias: #{command_name}")
+    @logger.debug("Current parsed data: #{@parsed_data.inspect}")
+
+    alias_entry = @parsed_data&.find do |entry|
+      entry[:type] == :alias &&
+        entry[:alias_type] == 'Cmnd_Alias' &&
+        entry[:name] == command_name
+    end
+
+    if alias_entry
+      @logger.debug("Found alias entry: #{alias_entry.inspect}")
+      alias_entry[:members]
+    else
+      @logger.debug("No alias entry found for: #{command_name}")
+      nil
+    end
+  end
+
+  def parse_pattern_command(command)
+    parts = []
+    current_part = ''
+    state = {
+      in_pattern: false,
+      pattern_depth: 0,
+      escaped: false
+    }
+
+    @logger.debug("Parsing pattern command: #{command.inspect}")
+
+    command.each_char do |c|
+      if state[:escaped]
+        current_part << c
+        state[:escaped] = false
+        next
+      end
+
+      case c
+      when '\\'
+        state[:escaped] = true
+        current_part << c
+      when '['
+        state[:in_pattern] = true
+        state[:pattern_depth] += 1
+        current_part << c
+      when ']'
+        state[:pattern_depth] -= 1
+        current_part << c
+        state[:in_pattern] = false if state[:pattern_depth] == 0
+      when '*', '?'
+        # Always treat glob characters as part of the current part
+        current_part << c
+      when ' '
+        if state[:in_pattern]
+          current_part << c
+        else
+          parts << current_part unless current_part.empty?
+          current_part = ''
+        end
+      else
+        current_part << c
+      end
+    end
+
+    parts << current_part unless current_part.empty?
+
+    @logger.debug("Pattern command parts: #{parts.inspect}")
+    parts
+  end
+
+  # Add pattern matching helper method
+  def pattern_matches?(pattern, string)
+    require 'pathname'
+
+    # First use our existing parser to handle sudoers-specific patterns
+    return true if pattern == string
+
+    # Then fall back to File::FNM for standard glob patterns
+    File.fnmatch?(pattern, string, File::FNM_PATHNAME | File::FNM_EXTGLOB)
+  rescue StandardError => e
+    @logger.warn("Pattern matching failed: #{e.message}")
+    false
   end
 
   def parse_user_list(users)
@@ -190,73 +361,55 @@ class SudoersParser
     hosts.split(/,\s*/).map(&:strip)
   end
 
-  def parse_command_list(commands)
-    commands.split(/,\s*/).map do |cmd|
-      parse_command_spec(cmd.strip)
-    end
-  end
-
-  def parse_command_spec(spec)
-    tags = []
-    runas = nil
-    command = spec
-
-    # Extract tags
-    TAGS.each do |tag|
-      if command.include?("#{tag}:")
-        tags << tag
-        command = command.sub("#{tag}:", '').strip
-      end
-    end
-
-    # Extract runas specification
-    if command =~ /^\((.*?)\)/
-      runas = Regexp.last_match(1)
-      command = command.sub(/^\((.*?)\)\s*/, '')
-    end
-
-    # Parse command and arguments while preserving patterns
-    if command.include?('"') || command.include?("'")
-      parts = parse_quoted_command(command)
-    elsif command.include?('[') || command.include?('*') # Handle patterns
-      base, *patterns = command.split(/(\s+(?:\[.*?\]|\*+))/).reject(&:empty?)
-      parts = [base, *patterns]
-    else
-      parts = command.split(/\s+(?=(?:[^\\]|^)(?:\\{2})*$)/) # Split on unescaped spaces
-    end
-
-    base_command = parts.first&.gsub(/\\(.)/, '\1') # Unescape command
-    arguments = parts[1..]&.map { |arg| arg.strip.gsub(/\\(.)/, '\1') } || [] # Unescape args
-
-    {
-      command: command.strip,
-      base_command:,
-      arguments:,
-      tags:,
-      runas: runas ? parse_runas_spec(runas) : nil
-    }
-  end
-
   def parse_quoted_command(command)
+    @logger.warn("Found empty quotes in command: #{command}") if command.include?('""') || command.include?("''")
+
     parts = []
     current = ''
-    in_quotes = false
-    quote_char = nil
+    state = {
+      in_quotes: false,
+      quote_char: nil,
+      escaped: false,
+      in_pattern: false,
+      pattern_depth: 0
+    }
 
     command.each_char do |c|
+      if state[:escaped]
+        current << c
+        state[:escaped] = false
+        next
+      end
+
       case c
+      when '\\'
+        state[:escaped] = true
+        current << c
       when '"', "'"
-        if !in_quotes
-          in_quotes = true
-          quote_char = c
-        elsif quote_char == c
-          in_quotes = false
-          quote_char = nil
+        if !state[:in_quotes]
+          state[:in_quotes] = true
+          state[:quote_char] = c
+        elsif c == state[:quote_char]
+          state[:in_quotes] = false
+          state[:quote_char] = nil
         else
+          # Handle nested quotes
           current << c
         end
+      when '['
+        unless state[:in_quotes]
+          state[:in_pattern] = true
+          state[:pattern_depth] += 1
+        end
+        current << c
+      when ']'
+        unless state[:in_quotes]
+          state[:pattern_depth] -= 1
+          state[:in_pattern] = false if state[:pattern_depth] == 0
+        end
+        current << c
       when ' '
-        if in_quotes
+        if state[:in_quotes] || state[:in_pattern]
           current << c
         else
           parts << current unless current.empty?
@@ -268,7 +421,17 @@ class SudoersParser
     end
 
     parts << current unless current.empty?
-    parts
+
+    # Clean up escaped characters but preserve empty quotes
+    parts.map do |part|
+      clean_part = part.gsub(/\\(.)/, '\1') # Unescape characters
+      if clean_part.match?(/^["'].*["']$/) && !clean_part.match?(/^(["']).*\1$/)
+        # Add missing closing quote if needed
+        clean_part + clean_part[0]
+      else
+        clean_part
+      end
+    end
   end
 
   def parse_runas_spec(spec)

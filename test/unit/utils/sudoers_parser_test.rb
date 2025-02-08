@@ -1,8 +1,8 @@
-require 'helper'
-require 'inspec/utils/sudoers_parser'
-require 'inspec/utils/sudoers_transform'
-require 'parslet/rig/rspec'
-require 'parslet/convenience'
+require "helper"
+require "inspec/utils/sudoers_parser"
+require "inspec/utils/sudoers_transform"
+require "parslet/rig/rspec"
+require "parslet/convenience"
 
 describe SudoersParser do
   let(:parser) { SudoersParser.new }
@@ -23,43 +23,43 @@ describe SudoersParser do
     parse(File.read(f))
   end
 
-  describe 'basic parsing' do
-    it 'handles empty files and comments' do
-      _(parsestr('')).must_equal ''
-      _(parsestr('# some nice comment')).must_equal '# some nice comment'
+  describe "basic parsing" do
+    it "handles empty files and comments" do
+      _(parsestr("")).must_equal ""
+      _(parsestr("# some nice comment")).must_equal "# some nice comment"
     end
   end
 
-  describe 'value parsing' do
-    describe 'key-value pairs' do
-      it 'parses simple key=value' do
-        result = parse('key=value')
-        _(result[:entries][0][:keypair][:key].to_s).must_equal 'key'
-        _(result[:entries][0][:keypair][:value].to_s).must_equal 'value'
+  describe "value parsing" do
+    describe "key-value pairs" do
+      it "parses simple key=value" do
+        result = parse("key=value")
+        _(result[:entries][0][:keypair][:key].to_s).must_equal "key"
+        _(result[:entries][0][:keypair][:value].to_s).must_equal "value"
       end
 
-      it 'parses key with quoted value' do
+      it "parses key with quoted value" do
         result = parse('key="quoted value"')
-        _(result[:entries][0][:keypair][:key].to_s).must_equal 'key'
-        _(result[:entries][0][:keypair][:value].to_s).must_equal 'quoted value'
+        _(result[:entries][0][:keypair][:key].to_s).must_equal "key"
+        _(result[:entries][0][:keypair][:value].to_s).must_equal "quoted value"
       end
 
-      it 'parses path-style values' do
+      it "parses path-style values" do
         result = parse('secure_path="/usr/local/bin:/usr/bin"')
-        _(result[:entries][0][:keypair][:key].to_s).must_equal 'secure_path'
-        _(result[:entries][0][:keypair][:value].to_s).must_equal '/usr/local/bin:/usr/bin'
+        _(result[:entries][0][:keypair][:key].to_s).must_equal "secure_path"
+        _(result[:entries][0][:keypair][:value].to_s).must_equal "/usr/local/bin:/usr/bin"
       end
     end
   end
 
-  describe 'default entries' do
-    describe 'basic defaults' do
-      it 'parses defaults with and without semicolon' do
-        result = parse('Defaults !authenticate')
-        _(result[:entries][0][:default][:args].first).must_equal '!authenticate'
+  describe "default entries" do
+    describe "basic defaults" do
+      it "parses defaults with and without semicolon" do
+        result = parse("Defaults !authenticate")
+        _(result[:entries][0][:default][:args].first).must_equal "!authenticate"
 
-        result = parse('Defaults !authenticate;')
-        _(result[:entries][0][:default][:args].first).must_equal '!authenticate'
+        result = parse("Defaults !authenticate;")
+        _(result[:entries][0][:default][:args].first).must_equal "!authenticate"
       end
 
       # Uncomment and fix next test
@@ -70,131 +70,131 @@ describe SudoersParser do
       # end
     end
 
-    describe 'user-specific defaults' do
-      it 'parses with and without semicolon' do
-        result = parse('Defaults:root !authenticate')
-        _(result[:entries][0][:default][:user][:identifier].to_s).must_equal 'root'
-        _(result[:entries][0][:default][:args].first).must_equal '!authenticate'
+    describe "user-specific defaults" do
+      it "parses with and without semicolon" do
+        result = parse("Defaults:root !authenticate")
+        _(result[:entries][0][:default][:user][:identifier].to_s).must_equal "root"
+        _(result[:entries][0][:default][:args].first).must_equal "!authenticate"
       end
 
-      it 'handles multiple values and quoted strings' do
+      it "handles multiple values and quoted strings" do
         result = parse('Defaults:root secure_path="/usr/local/bin:/usr/bin"')
-        _(result[:entries][0][:default][:user][:identifier].to_s).must_equal 'root'
+        _(result[:entries][0][:default][:user][:identifier].to_s).must_equal "root"
         _(result[:entries][0][:default][:args].first).must_equal 'secure_path="/usr/local/bin:/usr/bin"'
       end
     end
 
-    describe 'host-specific defaults' do
-      let(:base_input) { 'Defaults@WEBSERVERS ssl_verify' }
+    describe "host-specific defaults" do
+      let(:base_input) { "Defaults@WEBSERVERS ssl_verify" }
 
-      it 'parses with and without semicolon' do
+      it "parses with and without semicolon" do
         [base_input, "#{base_input};"].each do |input|
           result = parse(input)
-          _(result[:entries][0][:default][:host][:identifier]).must_equal 'WEBSERVERS'
-          _(result[:entries][0][:default][:args][0][:value]).must_equal 'ssl_verify'
+          _(result[:entries][0][:default][:host][:identifier]).must_equal "WEBSERVERS"
+          _(result[:entries][0][:default][:args][0][:value]).must_equal "ssl_verify"
         end
       end
 
-      it 'handles multiple values and quoted strings' do
+      it "handles multiple values and quoted strings" do
         result = parse('Defaults@WEBSERVERS ssl_verify secure_path="/usr/local/ssl/bin"')
-        _(result[:entries][0][:default][:host][:identifier]).must_equal 'WEBSERVERS'
-        _(result[:entries][0][:default][:args][0][:value]).must_equal 'ssl_verify'
-        _(result[:entries][0][:default][:args][1][:value]).must_equal '/usr/local/ssl/bin'
+        _(result[:entries][0][:default][:host][:identifier]).must_equal "WEBSERVERS"
+        _(result[:entries][0][:default][:args][0][:value]).must_equal "ssl_verify"
+        _(result[:entries][0][:default][:args][1][:value]).must_equal "/usr/local/ssl/bin"
       end
     end
 
-    describe 'command-specific defaults' do
-      let(:base_input) { 'Defaults>SERVICES !log_output' }
+    describe "command-specific defaults" do
+      let(:base_input) { "Defaults>SERVICES !log_output" }
 
-      it 'parses with and without semicolon' do
+      it "parses with and without semicolon" do
         [base_input, "#{base_input};"].each do |input|
           result = parse(input)
-          _(result[:entries][0][:default][:command][:identifier]).must_equal 'SERVICES'
-          _(result[:entries][0][:default][:args][0][:value]).must_equal '!log_output'
+          _(result[:entries][0][:default][:command][:identifier]).must_equal "SERVICES"
+          _(result[:entries][0][:default][:args][0][:value]).must_equal "!log_output"
         end
       end
 
-      it 'handles multiple values and quoted strings' do
-        result = parse('Defaults>STORAGE umask=027 noexec')
-        _(result[:entries][0][:default][:command][:identifier]).must_equal 'STORAGE'
-        _(result[:entries][0][:default][:args][0][:value]).must_equal 'umask=027'
-        _(result[:entries][0][:default][:args][1][:value]).must_equal 'noexec'
+      it "handles multiple values and quoted strings" do
+        result = parse("Defaults>STORAGE umask=027 noexec")
+        _(result[:entries][0][:default][:command][:identifier]).must_equal "STORAGE"
+        _(result[:entries][0][:default][:args][0][:value]).must_equal "umask=027"
+        _(result[:entries][0][:default][:args][1][:value]).must_equal "noexec"
       end
     end
   end
 
-  describe 'alias definitions' do
-    describe 'user aliases' do
-      it 'parses basic User_Alias' do
-        result = parse('User_Alias ADMIN = root')
-        _(result[:entries][0][:alias][:type]).must_equal 'User_Alias'
-        _(result[:entries][0][:alias][:name]).must_equal 'ADMIN'
-        _(parser.extract_values(result)).must_equal ['root']
+  describe "alias definitions" do
+    describe "user aliases" do
+      it "parses basic User_Alias" do
+        result = parse("User_Alias ADMIN = root")
+        _(result[:entries][0][:alias][:type]).must_equal "User_Alias"
+        _(result[:entries][0][:alias][:name]).must_equal "ADMIN"
+        _(parser.extract_values(result)).must_equal ["root"]
       end
 
-      it 'parses multiple user aliases' do
-        result = parse('User_Alias ADMINS = admin, wheel')
-        _(result[:entries][0][:alias][:type]).must_equal 'User_Alias'
-        _(result[:entries][0][:alias][:name]).must_equal 'ADMINS'
-        _(parser.extract_values(result)).must_equal %w[admin wheel]
+      it "parses multiple user aliases" do
+        result = parse("User_Alias ADMINS = admin, wheel")
+        _(result[:entries][0][:alias][:type]).must_equal "User_Alias"
+        _(result[:entries][0][:alias][:name]).must_equal "ADMINS"
+        _(parser.extract_values(result)).must_equal %w{admin wheel}
       end
 
-      it 'supports user groups in aliases' do
-        result = parse('User_Alias WEBMASTERS = %www-admin1, %www-admin2')
-        _(result[:entries][0][:alias][:type]).must_equal 'User_Alias'
-        _(result[:entries][0][:alias][:name]).must_equal 'WEBMASTERS'
-        _(parser.extract_values(result)).must_equal ['%www-admin1', '%www-admin2']
-      end
-    end
-
-    describe 'host aliases' do
-      it 'parses basic Host_Alias' do
-        result = parse('Host_Alias WEBSERVERS = www1, www2')
-        _(result[:entries][0][:alias][:type]).must_equal 'Host_Alias'
-        _(result[:entries][0][:alias][:name]).must_equal 'WEBSERVERS'
-        _(result[:entries][0][:alias][:values]).must_equal %w[www1 www2]
-      end
-
-      it 'handles IP addresses in host aliases' do
-        result = parse('Host_Alias NETWORKS = 192.168.0.0/24, 10.0.0.0/8')
-        _(result[:entries][0][:alias][:values]).must_equal ['192.168.0.0/24', '10.0.0.0/8']
+      it "supports user groups in aliases" do
+        result = parse("User_Alias WEBMASTERS = %www-admin1, %www-admin2")
+        _(result[:entries][0][:alias][:type]).must_equal "User_Alias"
+        _(result[:entries][0][:alias][:name]).must_equal "WEBMASTERS"
+        _(parser.extract_values(result)).must_equal ["%www-admin1", "%www-admin2"]
       end
     end
 
-    describe 'command aliases' do
-      it 'parses basic Cmnd_Alias' do
-        result = parse('Cmnd_Alias SERVICES = /usr/sbin/service, /bin/systemctl')
-        _(result[:entries][0][:alias][:type]).must_equal 'Cmnd_Alias'
-        _(result[:entries][0][:alias][:name]).must_equal 'SERVICES'
-        _(result[:entries][0][:alias][:values]).must_equal ['/usr/sbin/service', '/bin/systemctl']
+    describe "host aliases" do
+      it "parses basic Host_Alias" do
+        result = parse("Host_Alias WEBSERVERS = www1, www2")
+        _(result[:entries][0][:alias][:type]).must_equal "Host_Alias"
+        _(result[:entries][0][:alias][:name]).must_equal "WEBSERVERS"
+        _(result[:entries][0][:alias][:values]).must_equal %w{www1 www2}
       end
 
-      it 'handles command arguments' do
-        result = parse('Cmnd_Alias DOCKER = /usr/bin/docker pull, /usr/bin/docker run')
-        _(result[:entries][0][:alias][:values]).must_equal ['/usr/bin/docker pull', '/usr/bin/docker run']
-      end
-
-      it 'parses forbidden commands' do
-        result = parse('Cmnd_Alias FORBIDDEN = !/bin/systemctl')
-        _(result[:entries][0][:alias][:type]).must_equal 'Cmnd_Alias'
-        _(result[:entries][0][:alias][:name]).must_equal 'FORBIDDEN'
-        _(parser.extract_values(result)).must_equal ['!/bin/systemctl']
+      it "handles IP addresses in host aliases" do
+        result = parse("Host_Alias NETWORKS = 192.168.0.0/24, 10.0.0.0/8")
+        _(result[:entries][0][:alias][:values]).must_equal ["192.168.0.0/24", "10.0.0.0/8"]
       end
     end
 
-    describe 'runas aliases' do
-      it 'parses basic Runas_Alias' do
-        result = parse('Runas_Alias DBA = oracle, postgres')
-        _(result[:entries][0][:alias][:type]).must_equal 'Runas_Alias'
-        _(result[:entries][0][:alias][:name]).must_equal 'DBA'
-        _(parser.extract_values(result)).must_equal %w[oracle postgres]
+    describe "command aliases" do
+      it "parses basic Cmnd_Alias" do
+        result = parse("Cmnd_Alias SERVICES = /usr/sbin/service, /bin/systemctl")
+        _(result[:entries][0][:alias][:type]).must_equal "Cmnd_Alias"
+        _(result[:entries][0][:alias][:name]).must_equal "SERVICES"
+        _(result[:entries][0][:alias][:values]).must_equal ["/usr/sbin/service", "/bin/systemctl"]
       end
 
-      it 'handles group references' do
-        result = parse('Runas_Alias WEBOPS = %www-data, %nginx')
-        _(result[:entries][0][:alias][:type]).must_equal 'Runas_Alias'
-        _(result[:entries][0][:alias][:name]).must_equal 'WEBOPS'
-        _(parser.extract_values(result)).must_equal ['%www-data', '%nginx']
+      it "handles command arguments" do
+        result = parse("Cmnd_Alias DOCKER = /usr/bin/docker pull, /usr/bin/docker run")
+        _(result[:entries][0][:alias][:values]).must_equal ["/usr/bin/docker pull", "/usr/bin/docker run"]
+      end
+
+      it "parses forbidden commands" do
+        result = parse("Cmnd_Alias FORBIDDEN = !/bin/systemctl")
+        _(result[:entries][0][:alias][:type]).must_equal "Cmnd_Alias"
+        _(result[:entries][0][:alias][:name]).must_equal "FORBIDDEN"
+        _(parser.extract_values(result)).must_equal ["!/bin/systemctl"]
+      end
+    end
+
+    describe "runas aliases" do
+      it "parses basic Runas_Alias" do
+        result = parse("Runas_Alias DBA = oracle, postgres")
+        _(result[:entries][0][:alias][:type]).must_equal "Runas_Alias"
+        _(result[:entries][0][:alias][:name]).must_equal "DBA"
+        _(parser.extract_values(result)).must_equal %w{oracle postgres}
+      end
+
+      it "handles group references" do
+        result = parse("Runas_Alias WEBOPS = %www-data, %nginx")
+        _(result[:entries][0][:alias][:type]).must_equal "Runas_Alias"
+        _(result[:entries][0][:alias][:name]).must_equal "WEBOPS"
+        _(parser.extract_values(result)).must_equal ["%www-data", "%nginx"]
       end
     end
   end
