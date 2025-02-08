@@ -40,7 +40,7 @@ module Inspec::Resources
           @conf_path = conf_path
         end
       end
-    rescue => e
+    rescue StandardError => e
       fail_resource "Errors reading listener settings: #{e}"
     end
 
@@ -53,13 +53,13 @@ module Inspec::Resources
       else
         conf_path = "#{oracle_home}\\network\\admin\\listener.ora"
         if !inspec.file(conf_path).exist?
-          warn "No oracle listener settings found in ORACLE_HOME\\network\\admin directory"
+          warn 'No oracle listener settings found in ORACLE_HOME\\network\\admin directory'
           nil
         else
           @conf_path = conf_path
         end
       end
-    rescue => e
+    rescue StandardError => e
       fail_resource "Errors reading listener settings: #{e}"
     end
   end
