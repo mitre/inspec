@@ -11,7 +11,7 @@ module Inspec
           def to_h
             {
               users: @users,
-              groups: @groups
+              groups: @groups,
             }
           end
         end

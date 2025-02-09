@@ -17,7 +17,7 @@ module Inspec
               base_command: @base_command,
               arguments: @arguments,
               tags: @tags,
-              runas: @runas
+              runas: @runas,
             }
           end
         end

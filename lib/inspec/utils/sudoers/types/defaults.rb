@@ -12,7 +12,7 @@ module Inspec
             {
               type: :defaults,
               qualifiers: @qualifiers,
-              values: @values
+              values: @values,
             }
           end
         end

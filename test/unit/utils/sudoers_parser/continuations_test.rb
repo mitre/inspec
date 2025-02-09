@@ -1,7 +1,7 @@
-require 'minitest/autorun'
-require 'stringio'
-require 'logger'
-require_relative '../../../../lib/inspec/utils/sudoers_parser'
+require "minitest/autorun"
+require "stringio"
+require "logger"
+require_relative "../../../../lib/inspec/utils/sudoers_parser"
 
 class SudoersParserContinuationsTest < Minitest::Test
   def setup
@@ -33,7 +33,7 @@ class SudoersParserContinuationsTest < Minitest::Test
         DISPLAY\""
 
     result = @parser.parse(content)
-    assert_equal 'PATH NAME DISPLAY',
+    assert_equal "PATH NAME DISPLAY",
                  result.first[:values].first[:value]
   end
 end

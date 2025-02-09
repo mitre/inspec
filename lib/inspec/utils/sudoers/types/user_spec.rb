@@ -14,7 +14,7 @@ module Inspec
               type: :user_spec,
               users: @users,
               hosts: @hosts,
-              commands: @commands
+              commands: @commands,
             }
           end
         end

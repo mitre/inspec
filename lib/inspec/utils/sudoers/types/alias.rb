@@ -14,7 +14,7 @@ module Inspec
               type: :alias,
               alias_type: @type,
               name: @name,
-              members: @members
+              members: @members,
             }
           end
         end

@@ -1,4 +1,4 @@
-require_relative 'errors'
+require_relative "errors"
 
 module Inspec
   module Utils
