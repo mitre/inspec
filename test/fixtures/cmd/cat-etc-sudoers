@@ -123,6 +123,15 @@ Defaults        env_reset, timestamp_timeout=30
 Defaults env_keep="XDG_*, LANG, LANGUAGE, LINGUAS, LC_*, _XKB_CHARSET"
 Defaults editor="/usr/bin/vim:\"/usr/bin/vim.basic\""
 
+# Command specifications with proper quoting
+admin ALL=(ALL) "/usr/bin/find" "/var" "-name" "*.log"
+dba ALL=(ALL) "/usr/local/bin/mysql script"
+backup ALL=(ALL) "/usr/bin/tar" "-czf" "backup.tar.gz" "/home/*"
+
+# Commands with spaces must be quoted
+operator ALL=(ALL) "/usr/local/bin/custom script"
+www-data ALL=(ALL) "/var/www/scripts/update cache"
+
 # Sample command output
 # Reading the sudoers file
 # visudo -c

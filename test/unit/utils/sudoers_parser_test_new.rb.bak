@@ -1,0 +1,41 @@
+require 'minitest/autorun'
+require 'stringio'
+require 'logger'
+require 'timeout'
+require_relative '../../../lib/inspec/utils/sudoers_parser'
+
+class TestSudoersParser < Minitest::Test
+  TEST_TIMEOUT = 5
+
+  def setup
+    @debug_output = StringIO.new
+    @debug_logger = Logger.new(@debug_output).tap do |l|
+      l.level = Logger::DEBUG
+      l.formatter = proc { |severity, _, _, msg| puts "#{severity}: #{msg}" }
+    end
+  end
+
+  def test_basic_command_parsing
+    run_with_timeout(__method__) do
+      parser = SudoersParser.new(nil, @debug_logger)
+      result = parser.send(:parse_command_spec, '/usr/bin/less')
+
+      assert_equal '/usr/bin/less', result[:base_command]
+      assert_empty result[:tags]
+      assert_nil result[:resolved_commands]
+    end
+  end
+
+  private
+
+  def run_with_timeout(name, &block)
+    puts "\nStarting test: #{name}"
+    Timeout.timeout(TEST_TIMEOUT, &block)
+  rescue StandardError => e
+    puts "\nError in #{name}: #{e.class} - #{e.message}"
+    puts "Debug output:\n#{@debug_output.string}"
+    raise
+  ensure
+    puts "\nFinished test: #{name}"
+  end
+end
