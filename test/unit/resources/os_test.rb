@@ -1,6 +1,10 @@
 require "helper"
 require "inspec/resource"
 require "inspec/resources/os"
+require_relative "../../helpers/mock_loader"
+
+# Configure the logger to output debug messages
+Inspec::Log.level = :debug
 
 describe "Inspec::Resources::Os" do
   it "verify os parsing on CentOS" do
@@ -44,5 +48,29 @@ describe "Inspec::Resources::Os" do
     _(resource.family).must_equal "debian"
     _(resource.release).must_equal "18"
     _(resource.arch).must_equal "x86_64"
+  end
+
+  # Direct tests for unique or special cases
+  it "verify version methods on macOS" do
+    resource = MockLoader.new(:macos1472).load_resource("os")
+    _(resource.version.to_s).must_equal "14.7.2.23H311"
+    _(resource.version.major).must_equal 14
+    _(resource.version.minor).must_equal 7
+    _(resource.version.patch).must_equal 2
+    _(resource.version.build).must_equal "23H311"
+  end
+
+  it "verify semver comparisons on Ubuntu" do
+    resource = MockLoader.new(:ubuntu2204).load_resource("os")
+    _(resource.version).must_be :>, "8.1"
+    _(resource.version).must_be :<, "22.5"
+    _(resource.version).must_be :==, "22.4"
+    _(resource.version).must_be :>=, "22.4"
+    _(resource.version).must_be :<=, "22.4"
+    _(resource.version).must_be :>, 8.1
+    _(resource.version).must_be :<, 22.5
+    _(resource.version).must_be :==, 22.4
+    _(resource.version).must_be :>=, 22.4
+    _(resource.version).must_be :<=, 22.4
   end
 end

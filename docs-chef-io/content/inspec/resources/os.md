@@ -25,7 +25,7 @@ This resource first became available in v1.0.0 of InSpec.
 
 ## Syntax
 
-An `os` resource block declares the platform to be tested. The platform may specified via matcher or control block name. For example, using a matcher:
+An `os` resource block declares the platform to be tested. The platform may be specified via matcher or control block name. For example, using a matcher:
 
     describe os.family do
       it { should eq 'platform_family_name' }
@@ -37,8 +37,9 @@ The parameters available to `os` are:
 
 - `:name` - the operating system name, such as `centos`
 - `:family` - the operating system family, such as `redhat`
-- `:release` - the version of the operating system, such as `7.3.1611`
+- `:release` - the version of the operating system as a string, such as `7.3.1611`
 - `:arch` - the architecture of the operating system, such as `x86_64`
+- `:version` - the version of the operating system as a semantic version object, suitable for semantic version comparisons
 
 ## Examples
 
@@ -60,6 +61,54 @@ The following examples show how to use this Chef InSpec audit resource.
 
     describe os.family do
       it { should eq 'windows' }
+    end
+
+### Test the release version as a string
+
+    describe os.release do
+      it { should eq '8.10' }
+    end
+
+### Test the semantic version
+
+    describe os.version do
+      it { should cmp >= '8.10' }
+    end
+
+    describe os.version do
+      it { should eq '14.7.2' }
+    end
+
+### Test the semantic version components
+
+    describe os.version.major do
+      it { should eq 14 }
+    end
+
+    describe os.version.minor do
+      it { should eq 7 }
+    end
+
+    describe os.version.patch do
+      it { should eq 2 }
+    end
+
+    describe os.version.build do
+      it { should eq '23H311' }
+    end
+
+### Test the params method
+
+    describe os.params do
+      its(['name']) { should eq 'ubuntu' }
+      its(['family']) { should eq 'debian' }
+      its(['release']) { should eq '22.04' }
+      its(['arch']) { should eq 'x86_64' }
+      its(['version']) { should eq '22.04' }
+      its(['major']) { should eq 22 }
+      its(['minor']) { should eq 4 }
+      its(['patch']) { should eq 0 }
+      its(['build']) { should eq nil }
     end
 
 ## Matchers
