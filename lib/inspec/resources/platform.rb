@@ -1,4 +1,5 @@
 require "inspec/resource"
+require "inspec/resources/platform_helper"
 
 module Inspec::Resources
   class PlatformResource < Inspec.resource(1)
@@ -31,7 +32,7 @@ module Inspec::Resources
     end
 
     def families
-      @platform[:family_hierarchy]
+      @platform[:family_hierarchy] || []
     end
 
     def name
@@ -47,24 +48,23 @@ module Inspec::Resources
     end
 
     def platform?(name)
-      @platform.name == name ||
-        @platform.family_hierarchy.include?(name)
+      @platform[:name] == name ||
+        @platform[:family_hierarchy].include?(name)
     end
 
     def in_family?(family)
-      @platform.family_hierarchy.include?(family)
+      @platform[:family_hierarchy].include?(family)
     end
 
     def params
-      # rubocop:disable Layout/AlignHash
+      # rubocop:disable Style/HashSyntax
+      # rubocop:disable Layout/HashAlignment
       h = {
         name:     name,
         families: families,
         release:  release,
         arch:     arch,
       }
-      # rubocop:enable Layout/AlignHash
-
       h.delete :arch if in_family?("api") # not applicable if api
 
       h
@@ -73,54 +73,36 @@ module Inspec::Resources
     def supported?(supports)
       raise ArgumentError, "`supports` is nil." unless supports
 
-      supports.any? { |support|
-        support.all? { |k, v|
+      supports.any? do |support|
+        support.all? do |k, v|
           case normalize(k)
-          when :os_family, :platform_family then
+          when :os_family, :platform_family
             in_family?(v)
-          when :os, :platform then
+          when :os, :platform
             platform?(v)
-          when :os_name, :platform_name then
-            check_name(v)
-          when :release then
-            check_release(v)
+          when :os_name, :platform_name
+            PlatformHelper.check_name(name, v)
+          when :release
+            PlatformHelper.check_release(release, v)
           end
-        }
-      } || supports.empty?
+        end
+      end || supports.empty?
     end
 
-    def normalize(key) # TODO: dumb... push this up or remove need
+    def normalize(key)
       key.to_s.tr("-", "_").to_sym
     end
 
     def resource_id
-      @platform.name || "platform"
+      @platform[:name] || "platform"
     end
 
     def to_s
       "Platform Detection"
     end
 
-    private
-
-    def check_name(value)
-      # allow wild card matching
-      if value.include?("*")
-        cleaned = Regexp.escape(value).gsub('\*', ".*?")
-        name =~ /#{cleaned}/
-      else
-        name == value
-      end
-    end
-
-    def check_release(value)
-      # allow wild card matching
-      if value.include?("*")
-        cleaned = Regexp.escape(value).gsub('\*', ".*?")
-        release =~ /#{cleaned}/
-      else
-        release == value
-      end
+    def fetch_version
+      PlatformHelper.fetch_version(inspec, @platform)
     end
   end
 end
