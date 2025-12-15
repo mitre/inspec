@@ -3,7 +3,7 @@ require "inspec/resource"
 require "inspec/resources/platform"
 
 describe "Inspec::Resources::Platform" do
-  let(:resource) { MockLoader.new(:ubuntu).load_resource("platform") }
+  let(:resource) { MockLoader.new(:ubuntu2204).load_resource("platform") }
 
   it "generates the resource_id for the current resource" do
     _(resource.resource_id).must_equal "ubuntu"
@@ -124,5 +124,4 @@ describe "Inspec::Resources::Platform" do
     ]
     _(resource2).wont_be :supported?, supports
   end
-
 end
