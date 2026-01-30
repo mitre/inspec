@@ -1,0 +1,7 @@
+UNIT FILE                                  STATE
+sshd.service                               enabled
+dbus.service                               static
+apache2.service                            disabled
+network.service                            enabled
+
+4 unit files listed.

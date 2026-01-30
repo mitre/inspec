@@ -1,0 +1,8 @@
+Id=apache2.service
+Names=apache2.service
+Description=Apache Web Server
+LoadState=loaded
+UnitFileState=disabled
+SubState=dead
+ActiveState=inactive
+User=www-data

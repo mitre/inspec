@@ -1,0 +1,8 @@
+Id=network.service
+Names=network.service
+Description=Network Service
+LoadState=loaded
+UnitFileState=enabled
+SubState=running
+ActiveState=active
+User=

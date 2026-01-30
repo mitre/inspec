@@ -1,0 +1,12 @@
+[
+  {
+    "Name": "dhcp",
+    "DisplayName": "DHCP Client",
+    "Status": 4
+  },
+  {
+    "Name": "winmgmt",
+    "DisplayName": "Windows Management Instrumentation",
+    "Status": 4
+  }
+]

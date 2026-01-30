@@ -1,0 +1,8 @@
+Id=dbus.service
+Names=messagebus.service dbus.service
+Description=D-Bus System Message Bus
+LoadState=loaded
+UnitFileState=static
+SubState=running
+ActiveState=active
+User=root
