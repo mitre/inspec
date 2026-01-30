@@ -192,7 +192,8 @@ module Inspec
         cmd = inspec.command('systemctl list-unit-files --type=service --all --no-pager')
         return [] if cmd.exit_status != 0
 
-        services = []
+        # Collect all service names and their unit file states
+        service_info = []
         cmd.stdout.split("\n").each do |line|
           # Skip header and footer lines
           next if line =~ /^UNIT FILE/ || line =~ /^\s*$/ || line =~ /unit files listed/
@@ -204,29 +205,45 @@ module Inspec
           service_name = parts[0].gsub(/\.service$/, '')
           unit_file_state = parts[1]
 
-          # Get detailed info for this service
-          info_cmd = inspec.command("systemctl show --no-pager --all #{parts[0]}")
-          next if info_cmd.exit_status != 0
+          service_info << { name: service_name, unit_name: parts[0], state: unit_file_state }
+        end
 
-          # Parse systemctl show output
+        return [] if service_info.empty?
+
+        # Get detailed info for ALL services in one command
+        all_unit_names = service_info.map { |s| s[:unit_name] }.join(' ')
+        info_cmd = inspec.command("systemctl show --no-pager --all #{all_unit_names}")
+        return [] if info_cmd.exit_status != 0
+
+        # Parse the combined output - systemctl show outputs each service separated by blank lines
+        service_blocks = info_cmd.stdout.split("\n\n")
+        services = []
+
+        service_blocks.each_with_index do |block, idx|
+          next if block.strip.empty?
+          break if idx >= service_info.length
+
+          # Parse systemctl show output for this service
           params = SimpleConfig.new(
-            info_cmd.stdout.chomp,
+            block.chomp,
             assignment_regex: /^\s*([^=]*?)\s*=\s*(.*?)\s*$/,
             multiple_values: false
           ).params
+
+          service_data = service_info[idx]
 
           # Check if running
           active_state = params['ActiveState']
           running = active_state == 'active'
 
           # Check if enabled
-          enabled = %w[enabled static indirect generated].include?(unit_file_state)
+          enabled = %w[enabled static indirect generated].include?(service_data[:state])
 
           # Get startname (User field)
           startname = params['User']
 
           services << {
-            name: service_name,
+            name: service_data[:name],
             description: params['Description'],
             installed: params['LoadState'] == 'loaded',
             running:,
