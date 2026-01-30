@@ -215,22 +215,40 @@ module Inspec
         info_cmd = inspec.command("systemctl show --no-pager --all #{all_unit_names}")
         return [] if info_cmd.exit_status != 0
 
-        # Parse the combined output - systemctl show outputs each service separated by blank lines
-        service_blocks = info_cmd.stdout.split("\n\n")
-        services = []
+        # Parse the combined output - systemctl show outputs each service's properties
+        # We need to group lines by service using the Id= field
+        service_properties = {}
+        current_service = nil
+        current_props = []
 
-        service_blocks.each_with_index do |block, idx|
-          next if block.strip.empty?
-          break if idx >= service_info.length
+        info_cmd.stdout.split("\n").each do |line|
+          # Id= indicates start of new service block
+          if line =~ /^Id=(.+)$/
+            # Save previous service if exists
+            if current_service
+              service_properties[current_service] = current_props.join("\n")
+            end
+            current_service = ::Regexp.last_match(1)
+            current_props = [line]
+          elsif current_service
+            current_props << line
+          end
+        end
+        # Save last service
+        service_properties[current_service] = current_props.join("\n") if current_service
+
+        # Build services array
+        services = []
+        service_info.each do |service_data|
+          props_text = service_properties[service_data[:unit_name]]
+          next unless props_text
 
           # Parse systemctl show output for this service
           params = SimpleConfig.new(
-            block.chomp,
+            props_text,
             assignment_regex: /^\s*([^=]*?)\s*=\s*(.*?)\s*$/,
             multiple_values: false
           ).params
-
-          service_data = service_info[idx]
 
           # Check if running
           active_state = params['ActiveState']
