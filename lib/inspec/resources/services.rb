@@ -42,6 +42,23 @@ module Inspec
         describe services.where(enabled: true) do
           its('count') { should be >= 5 }
         end
+
+        # Search by canonical service name
+        describe services.where { name == 'dbus-broker' } do
+          it { should be_running }
+        end
+
+        # Search by service alias (systemd only)
+        # Note: Some services have aliases (e.g., 'dbus' is an alias for 'dbus-broker').
+        # Use aliases.include?() to search by alias name.
+        describe services.where { aliases.include?('dbus') } do
+          it { should be_running }
+        end
+
+        # Complex filter combining name, alias, and status
+        describe services.where { (name == 'firewalld' || aliases.include?('dbus-org.fedoraproject.FirewallD1')) && enabled } do
+          it { should exist }
+        end
       EXAMPLE
 
       def initialize
@@ -60,6 +77,7 @@ module Inspec
             .register_column(:installed, field: :installed)
             .register_column(:startmodes, field: :startmode)
             .register_column(:startnames, field: :startname)
+            .register_column(:aliases, field: :aliases)
       filter.register_custom_matcher(:enabled?) { |filter_table| filter_table.where { enabled == true }.entries.any? }
       filter.register_custom_matcher(:running?) { |filter_table| filter_table.where { running == true }.entries.any? }
       filter.register_custom_matcher(:installed?) do |filter_table|
@@ -202,6 +220,9 @@ module Inspec
           parts = line.split
           next if parts.length < 2
 
+          # Skip template units (ending with @.service) - they can't be queried with systemctl show
+          next if parts[0] =~ /@\.service$/
+
           service_name = parts[0].gsub(/\.service$/, '')
           unit_file_state = parts[1]
 
@@ -210,36 +231,73 @@ module Inspec
 
         return [] if service_info.empty?
 
-        # Get detailed info for ALL services in one command
-        all_unit_names = service_info.map { |s| s[:unit_name] }.join(' ')
-        info_cmd = inspec.command("systemctl show --no-pager --all #{all_unit_names}")
-        return [] if info_cmd.exit_status != 0
-
-        # Parse the combined output - systemctl show outputs each service's properties
-        # We need to group lines by service using the Id= field
+        # Query services in chunks - systemctl show has a hard limit of ~15 services per call
+        # Requesting more than 15 still only returns 15, so we batch in groups of 15
+        chunk_size = 15
         service_properties = {}
-        current_service = nil
-        current_props = []
+        alias_map = {} # canonical_name => [alias1, alias2, ...]
 
-        info_cmd.stdout.split("\n").each do |line|
-          # Id= indicates start of new service block
-          if line =~ /^Id=(.+)$/
-            # Save previous service if exists
-            if current_service
-              service_properties[current_service] = current_props.join("\n")
+        service_info.each_slice(chunk_size) do |chunk|
+          requested_units = chunk.map { |s| s[:unit_name] }
+          all_unit_names = requested_units.join(' ')
+          info_cmd = inspec.command("systemctl show --no-pager --all #{all_unit_names}")
+
+          # Skip this chunk if command completely failed
+          next if info_cmd.stdout.empty?
+
+          # Parse this chunk's output - group lines by service using the Id= field
+          # Also track which Ids were returned to detect aliases
+          returned_ids = []
+          current_service = nil
+          current_props = []
+
+          info_cmd.stdout.split("\n").each do |line|
+            # Id= indicates start of new service block
+            if line =~ /^Id=(.+)$/
+              # Save previous service if exists
+              if current_service
+                service_properties[current_service] = current_props.join("\n")
+                returned_ids << current_service
+              end
+              current_service = ::Regexp.last_match(1)
+              current_props = [line]
+            elsif current_service
+              current_props << line
             end
-            current_service = ::Regexp.last_match(1)
-            current_props = [line]
-          elsif current_service
-            current_props << line
+          end
+          # Save last service from this chunk
+          if current_service
+            service_properties[current_service] = current_props.join("\n")
+            returned_ids << current_service
+          end
+
+          # Detect aliases: requested unit names that don't appear in returned Ids
+          potential_aliases = requested_units - returned_ids
+          potential_aliases.each do |alias_unit|
+            # Query individually to find canonical name
+            alias_cmd = inspec.command("systemctl show --no-pager #{alias_unit}")
+            next if alias_cmd.stdout.empty?
+
+            # Extract just the Id= line
+            id_line = alias_cmd.stdout.lines.find { |line| line.start_with?('Id=') }
+            if id_line && id_line =~ /^Id=(.+)$/
+              canonical_id = ::Regexp.last_match(1).strip
+              canonical_name = canonical_id.gsub(/\.service$/, '')
+              alias_name = alias_unit.gsub(/\.service$/, '')
+
+              alias_map[canonical_name] ||= []
+              alias_map[canonical_name] << alias_name
+            end
           end
         end
-        # Save last service
-        service_properties[current_service] = current_props.join("\n") if current_service
 
-        # Build services array
+        # Build services array from all collected properties
+        # Only process canonical services (skip aliases - they're tracked in alias_map)
         services = []
         service_info.each do |service_data|
+          # Skip alias entries - we only want canonical services
+          next if service_data[:state] == 'alias'
+
           props_text = service_properties[service_data[:unit_name]]
           next unless props_text
 
@@ -268,7 +326,8 @@ module Inspec
             enabled:,
             type: 'systemd',
             startmode: nil,
-            startname:
+            startname:,
+            aliases: alias_map[service_data[:name]] || []
           }
         end
 
@@ -304,7 +363,8 @@ module Inspec
             enabled:,
             type: 'sysv',
             startmode: nil,
-            startname: nil
+            startname: nil,
+            aliases: []
           }
         end
 
@@ -343,7 +403,8 @@ module Inspec
             enabled:,
             type: 'upstart',
             startmode: nil,
-            startname: nil
+            startname: nil,
+            aliases: []
           }
         end
 
@@ -401,7 +462,8 @@ module Inspec
             enabled:,
             type: 'windows',
             startmode:,
-            startname:
+            startname:,
+            aliases: []
           }
         end
 
@@ -441,7 +503,8 @@ module Inspec
             enabled:,
             type: 'darwin',
             startmode: nil,
-            startname: nil
+            startname: nil,
+            aliases: []
           }
         end
 
@@ -475,7 +538,8 @@ module Inspec
             enabled: true, # Listed by service -e means enabled
             type: 'bsd-init',
             startmode: nil,
-            startname: nil
+            startname: nil,
+            aliases: []
           }
         end
 
@@ -510,7 +574,8 @@ module Inspec
             enabled:,
             type: 'bsd-init',
             startmode: nil,
-            startname: nil
+            startname: nil,
+            aliases: []
           }
         end
 
@@ -550,7 +615,8 @@ module Inspec
             enabled:,
             type: 'srcmstr',
             startmode: nil,
-            startname: nil
+            startname: nil,
+            aliases: []
           }
         end
 
@@ -586,7 +652,8 @@ module Inspec
             enabled:,
             type: 'svcs',
             startmode: nil,
-            startname: nil
+            startname: nil,
+            aliases: []
           }
         end
 
