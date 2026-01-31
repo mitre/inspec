@@ -78,6 +78,18 @@ module Inspec
             .register_column(:startmodes, field: :startmode)
             .register_column(:startnames, field: :startname)
             .register_column(:aliases, field: :aliases)
+            .register_column(:pids, field: :pid)
+            .register_column(:groups, field: :group)
+            .register_column(:states, field: :state)
+            .register_column(:sub_states, field: :sub_state)
+            .register_column(:active_states, field: :active_state)
+            .register_column(:load_states, field: :load_state)
+            .register_column(:unit_file_states, field: :unit_file_state)
+            .register_column(:exec_starts, field: :exec_start)
+            .register_column(:restarts, field: :restart)
+            .register_column(:service_types, field: :service_type)
+            .register_column(:fragment_paths, field: :fragment_path)
+            .register_column(:results, field: :result)
       filter.register_custom_matcher(:enabled?) { |filter_table| filter_table.where { enabled == true }.entries.any? }
       filter.register_custom_matcher(:running?) { |filter_table| filter_table.where { running == true }.entries.any? }
       filter.register_custom_matcher(:installed?) do |filter_table|
@@ -308,26 +320,49 @@ module Inspec
             multiple_values: false
           ).params
 
-          # Check if running
+          # Extract raw state fields
           active_state = params['ActiveState']
+          sub_state = params['SubState']
+          load_state = params['LoadState']
+          unit_file_state = params['UnitFileState']
+
+          # Derive convenience booleans
           running = active_state == 'active'
-
-          # Check if enabled
           enabled = %w[enabled static indirect generated].include?(service_data[:state])
+          installed = load_state == 'loaded'
 
-          # Get startname (User field)
-          startname = params['User']
+          # Extract ExecStart path (format: { path=/usr/bin/foo ; argv[]= ... })
+          exec_start = nil
+          if params['ExecStart'] && params['ExecStart'] =~ /path=([^;\s]+)/
+            exec_start = ::Regexp.last_match(1)
+          end
+
+          # Get numeric PID (convert to integer if present)
+          main_pid = params['MainPID']
+          pid = main_pid && main_pid != '0' ? main_pid.to_i : nil
 
           services << {
             name: service_data[:name],
             description: params['Description'],
-            installed: params['LoadState'] == 'loaded',
+            installed:,
             running:,
             enabled:,
             type: 'systemd',
             startmode: nil,
-            startname:,
-            aliases: alias_map[service_data[:name]] || []
+            startname: params['User'],
+            aliases: alias_map[service_data[:name]] || [],
+            pid:,
+            group: params['Group'],
+            state: sub_state,
+            sub_state:,
+            active_state:,
+            load_state:,
+            unit_file_state:,
+            exec_start:,
+            restart: params['Restart'],
+            service_type: params['Type'],
+            fragment_path: params['FragmentPath'],
+            result: params['Result']
           }
         end
 
@@ -364,7 +399,19 @@ module Inspec
             type: 'sysv',
             startmode: nil,
             startname: nil,
-            aliases: []
+            aliases: [],
+            pid: nil,
+            group: nil,
+            state: nil,
+            sub_state: nil,
+            active_state: nil,
+            load_state: nil,
+            unit_file_state: nil,
+            exec_start: nil,
+            restart: nil,
+            service_type: nil,
+            fragment_path: nil,
+            result: nil
           }
         end
 
@@ -404,7 +451,19 @@ module Inspec
             type: 'upstart',
             startmode: nil,
             startname: nil,
-            aliases: []
+            aliases: [],
+            pid: nil,
+            group: nil,
+            state: nil,
+            sub_state: nil,
+            active_state: nil,
+            load_state: nil,
+            unit_file_state: nil,
+            exec_start: nil,
+            restart: nil,
+            service_type: nil,
+            fragment_path: nil,
+            result: nil
           }
         end
 
@@ -463,7 +522,19 @@ module Inspec
             type: 'windows',
             startmode:,
             startname:,
-            aliases: []
+            aliases: [],
+            pid: nil,
+            group: nil,
+            state: nil,
+            sub_state: nil,
+            active_state: nil,
+            load_state: nil,
+            unit_file_state: nil,
+            exec_start: nil,
+            restart: nil,
+            service_type: nil,
+            fragment_path: nil,
+            result: nil
           }
         end
 
@@ -504,7 +575,19 @@ module Inspec
             type: 'darwin',
             startmode: nil,
             startname: nil,
-            aliases: []
+            aliases: [],
+            pid: nil,
+            group: nil,
+            state: nil,
+            sub_state: nil,
+            active_state: nil,
+            load_state: nil,
+            unit_file_state: nil,
+            exec_start: nil,
+            restart: nil,
+            service_type: nil,
+            fragment_path: nil,
+            result: nil
           }
         end
 
@@ -539,7 +622,19 @@ module Inspec
             type: 'bsd-init',
             startmode: nil,
             startname: nil,
-            aliases: []
+            aliases: [],
+            pid: nil,
+            group: nil,
+            state: nil,
+            sub_state: nil,
+            active_state: nil,
+            load_state: nil,
+            unit_file_state: nil,
+            exec_start: nil,
+            restart: nil,
+            service_type: nil,
+            fragment_path: nil,
+            result: nil
           }
         end
 
@@ -575,7 +670,19 @@ module Inspec
             type: 'bsd-init',
             startmode: nil,
             startname: nil,
-            aliases: []
+            aliases: [],
+            pid: nil,
+            group: nil,
+            state: nil,
+            sub_state: nil,
+            active_state: nil,
+            load_state: nil,
+            unit_file_state: nil,
+            exec_start: nil,
+            restart: nil,
+            service_type: nil,
+            fragment_path: nil,
+            result: nil
           }
         end
 
@@ -616,7 +723,19 @@ module Inspec
             type: 'srcmstr',
             startmode: nil,
             startname: nil,
-            aliases: []
+            aliases: [],
+            pid: nil,
+            group: nil,
+            state: nil,
+            sub_state: nil,
+            active_state: nil,
+            load_state: nil,
+            unit_file_state: nil,
+            exec_start: nil,
+            restart: nil,
+            service_type: nil,
+            fragment_path: nil,
+            result: nil
           }
         end
 
@@ -653,7 +772,19 @@ module Inspec
             type: 'svcs',
             startmode: nil,
             startname: nil,
-            aliases: []
+            aliases: [],
+            pid: nil,
+            group: nil,
+            state: nil,
+            sub_state: nil,
+            active_state: nil,
+            load_state: nil,
+            unit_file_state: nil,
+            exec_start: nil,
+            restart: nil,
+            service_type: nil,
+            fragment_path: nil,
+            result: nil
           }
         end
 
