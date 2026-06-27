@@ -53,7 +53,7 @@ do_build() {
 do_install() {
   export ARTIFACTORY_URL="https://artifactory-internal.ps.chef.co/artifactory/omnibus-gems-local/"
   gem sources --add "$ARTIFACTORY_URL"
-  gem install chef-official-distribution
+  gem install chef-official-distribution --ignore-dependencies --no-document
   gem sources --remove "$ARTIFACTORY_URL"
 
   # MUST install inspec first because inspec-bin depends on it via gemspec
@@ -77,6 +77,9 @@ do_install() {
   # ed25519 ssh key support done here as its a native gem we can't put in the gemspec
   # for omnibus we also install this as part of the package
   gem install ed25519 bcrypt_pbkdf --no-document
+
+  # Clean up stray Gemfile.lock from lint_roller gem to appease security scanners
+  ruby "$HAB_CACHE_SRC_PATH/$pkg_dirname/scripts/cleanup_lint_roller.rb"
 
   # Certain gems (timeliness) are getting installed with world writable files
   # This is removing write bits for group and other.

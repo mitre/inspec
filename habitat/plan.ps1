@@ -47,6 +47,10 @@ function Invoke-Build {
 
         Write-BuildLine " ** Using bundler to retrieve the Ruby dependencies"
         bundle install
+
+        Write-BuildLine " ** Cleaning up lint_roller Gemfile.lock"
+        ruby .\scripts\cleanup_lint_roller.rb
+
         If ($lastexitcode -ne 0) { Exit $lastexitcode }
         Write-BuildLine " ** Running the inspec project's 'rake install' to install the path-based gems so they look like any other installed gem."
         bundle exec rake install # this needs to be 'bundle exec'd because a Rakefile makes reference to Bundler
@@ -60,7 +64,7 @@ function Invoke-Install {
     Write-BuildLine "** Installing chef-official-distribution gem from artifactory"
     $ArtifactoryUrl = "https://artifactory-internal.ps.chef.co/artifactory/omnibus-gems-local/"
     gem sources --add $ArtifactoryUrl
-    gem install chef-official-distribution
+    gem install chef-official-distribution --ignore-dependencies --no-document
     gem sources --remove $ArtifactoryUrl
 
     # Verify chef-official-distribution installation

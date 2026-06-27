@@ -1,11 +1,11 @@
 # Change Log
 <!-- usage documentation: http://expeditor-docs.es.chef.io/configuration/changelog/ -->
 
-<!-- latest_release 7.0.96 -->
-## [v7.0.96](https://github.com/inspec/inspec/tree/v7.0.96) (2025-11-11)
+<!-- latest_release 7.0.110 -->
+## [v7.0.110](https://github.com/inspec/inspec/tree/v7.0.110) (2026-04-20)
 
 #### Merged Pull Requests
-- CHEF-26189 Telemetry fix: Handling of train platform data fetching safely [#7611](https://github.com/inspec/inspec/pull/7611) ([Nik08](https://github.com/Nik08))
+- refactor: CHEF-29885 - Remove all Omnibus references from InSpec 7 [#7854](https://github.com/inspec/inspec/pull/7854) ([Nik08](https://github.com/Nik08))
 <!-- latest_release -->
 
 ## [v6.4.48](https://github.com/inspec/inspec/tree/v6.4.48) (2023-08-22)
@@ -34,16 +34,37 @@
 #### Merged Pull Requests
 - Bump omnibus-software from `4b08f0b` to `3268356` in /omnibus [#6587](https://github.com/inspec/inspec/pull/6587) ([dependabot[bot]](https://github.com/dependabot[bot]))
 
-<!-- release_rollup since=base-2025-current -->
-### Changes since base-2025-current release
+<!-- release_rollup since=7.0.107 -->
+### Changes since 7.0.107 release
 
 #### Merged Pull Requests
-- CHEF-26189 Telemetry fix: Handling of train platform data fetching safely [#7611](https://github.com/inspec/inspec/pull/7611) ([Nik08](https://github.com/Nik08)) <!-- 7.0.96 -->
+- refactor: CHEF-29885 - Remove all Omnibus references from InSpec 7 [#7854](https://github.com/inspec/inspec/pull/7854) ([Nik08](https://github.com/Nik08)) <!-- 7.0.110 -->
+- upgrade adderessable gem to 2.9.0 [#7833](https://github.com/inspec/inspec/pull/7833) ([chandra-progress](https://github.com/chandra-progress)) <!-- 7.0.109 -->
+- CHEF-20799 FOREPORT Fixes in json reporter (#7799) [#7810](https://github.com/inspec/inspec/pull/7810) ([Nik08](https://github.com/Nik08)) <!-- 7.0.108 -->
+- Update common github actions to use main [#7807](https://github.com/inspec/inspec/pull/7807) ([Nik08](https://github.com/Nik08)) <!-- 7.0.107 -->
+- CHEF-31158 Setup common config to block PR merges if trufflehog fails [#7803](https://github.com/inspec/inspec/pull/7803) ([Nik08](https://github.com/Nik08)) <!-- 7.0.107 -->
 <!-- release_rollup -->
 
 <!-- latest_stable_release -->
-## [vbase-2025-current](https://github.com/inspec/inspec/tree/vbase-2025-current) (2025-10-16)
+## [v7.0.107](https://github.com/inspec/inspec/tree/v7.0.107) (2026-02-23)
+
+#### Merged Pull Requests
+- CHEF-26189 Telemetry fix: Handling of train platform data fetching safely [#7611](https://github.com/inspec/inspec/pull/7611) ([Nik08](https://github.com/Nik08))
+- Remove release notes Expeditor actions InSpec 7 [#7725](https://github.com/inspec/inspec/pull/7725) ([IanMadd](https://github.com/IanMadd))
+- FOREPORT Updated test and dependency version in fixture to solve gem conflict issue [#7742](https://github.com/inspec/inspec/pull/7742) ([Nik08](https://github.com/Nik08))
+- Pipeline issue fixes for InSpec 7 [#7749](https://github.com/inspec/inspec/pull/7749) ([Nik08](https://github.com/Nik08))
+- Revert mixlib-shellout version pinning [#7752](https://github.com/inspec/inspec/pull/7752) ([balasubramanian-s](https://github.com/balasubramanian-s))
+- FOREPORT - Chef 28019/oracle tns ssl backport to inspec7 [#7732](https://github.com/inspec/inspec/pull/7732) ([sa-progress](https://github.com/sa-progress))
+- FOREPORT CHEF-28996-Update Pipelines to use Ruby 3.1.7  [#7763](https://github.com/inspec/inspec/pull/7763) ([Nik08](https://github.com/Nik08))
+- Remove Gemfile.lock from .gitignore for BlackDuck integration [#7768](https://github.com/inspec/inspec/pull/7768) ([sa-progress](https://github.com/sa-progress))
+- Adding a script to clean lint_roller gem from hab packaging [#7770](https://github.com/inspec/inspec/pull/7770) ([Nik08](https://github.com/Nik08))
+- Foreport - Fix github workflow for sbom generation  (#7711) [#7774](https://github.com/inspec/inspec/pull/7774) ([balasubramanian-s](https://github.com/balasubramanian-s))
+- Ignore dependencies flag usage for external gems [#7775](https://github.com/inspec/inspec/pull/7775) ([Nik08](https://github.com/Nik08))
+- PR for version bump [#7783](https://github.com/inspec/inspec/pull/7783) ([balasubramanian-s](https://github.com/balasubramanian-s))
+- Update NOTICE for v7.0.107 [#7789](https://github.com/inspec/inspec/pull/7789) ([Nik08](https://github.com/Nik08))
 <!-- latest_stable_release -->
+
+## [vbase-2025-current](https://github.com/inspec/inspec/tree/vbase-2025-current) (2025-10-16)
 
 ## [vbase-2025-current](https://github.com/inspec/inspec/tree/vbase-2025-current) (2025-10-16)
 

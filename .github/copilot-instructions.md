@@ -33,7 +33,6 @@ inspec/
 │   ├── functional/            # Functional tests
 │   └── fixtures/              # Test fixtures
 ├── inspec-bin/                # CLI binary gem
-├── omnibus/                   # Omnibus packaging
 ├── support/                   # Support files and scripts
 ├── tasks/                     # Rake tasks
 ├── inspec.gemspec            # Main gem specification
@@ -412,79 +411,6 @@ Practical usage examples...
 **Important Notes:**
 - Confirm the different sections that needs to be included in the documentation before making any changes.
 
-### GitHub Wiki (Release Notes)
-
-**Location**: https://github.com/inspec/inspec/wiki/Pending-Release-Notes
-
-**CRITICAL FOR RELEASE NOTES TASKS:**
-- **ONLY provide content formatted for manual wiki update**
-- **DO NOT create any files in the repository**
-- **DO NOT update any existing documentation files**
-- **DO NOT update habitat.md, shell.md, _index.md, or create new .md files**
-- **ONLY output the structured content that can be copy-pasted to GitHub Wiki**
-- **NOT controlled by code repository** - Wiki is separate from main codebase
-- **Manually updated** by accessing the GitHub wiki interface directly
-- Follow the content structure below for arranging the content of release notes
-- Provide with the content that could be used to update manually but do not make any changes to the repository itself
-- Use md format for this documentation and linked description of change with a PR. Follow this format "DESCRIPTION. ([#PR NUMBER](https://github.com/inspec/inspec/pull/#PR_NUMBER))"
-- **NEVER create fictional content** - Only document real changes based on actual PRs
-- **NEVER make up performance numbers** - Do not invent "40% faster" or similar claims
-- **NEVER create fictional bug fixes** - Do not mention non-existent memory leaks or made-up issues
-- **ALWAYS ask for actual PR list** before creating content if PRs are not provided
-- **NEVER duplicate the same change across sections** - Each change belongs in only ONE section
-- **ONLY document factual information** from real development work
-
-**Prompt**: Ask for the PRs to mention in release notes content before finalizing
-
-**For Release Notes Tasks - ONLY provide content in this structure:**
-
-```markdown
-## InSpec X.Y.Z Release Notes
-
-### New Features
-- Feature 1 description
-- Feature 2 description
-
-### Improvements
-- Improvement 1 description
-- Improvement 2 description
-
-### Bug Fixes
-- Bug fix 1 description
-- Bug fix 2 description
-
-### CVEs
-- CVE fix 1 description (if any)
-
-### Dependency Updates
-- Dependency update 1
-- Dependency update 2
-```
-
-**Content Structure Guidelines:**
-- **New Features**: Major functionality additions, new resources, new CLI commands, or significant new capabilities
-- **Improvements**: Performance enhancements, usability improvements, code optimizations, or enhanced existing features
-- **Bug Fixes**: Important bug resolutions, critical fixes, or corrections to existing functionality
-- **CVEs**: Any security vulnerabilities addressed, security patches, or security-related fixes
-- **Dependency Updates**: Updates to key dependencies, Ruby version changes, or major library upgrades
-
-**Section Assignment Rules:**
-- **Ruby version upgrades** → ONLY in "Dependency Updates" section
-- **New CLI commands** → ONLY in "New Features" section
-- **Performance improvements** → ONLY in "Improvements" section
-- **Security fixes** → ONLY in "CVEs" section
-- **Bug resolutions** → ONLY in "Bug Fixes" section
-- Each change should appear in EXACTLY ONE section, never multiple sections
-
-**Process:**
-1. Release notes are drafted in the "Pending Release Notes" wiki page
-2. During release process, content is moved to version-specific pages
-3. Updates require direct wiki access, not pull requests
-4. Content is used by automated release scripts
-
-**Prompt**:
-- Ask for the PRs to mention in release notes content before finalizing
-
 ### README Files - Avoid Updates
 
 **Policy**: README files are **rarely updated** and should **not** be modified unless absolutely necessary. So ask to confirm if any changes are needed.
@@ -578,7 +504,7 @@ All tasks should follow this prompt-based workflow:
      - **Testing framework**: Follow **Testing Patterns** section (Unit Tests, Functional Tests, Integration Tests)
      - **Licensing features**: Reference **Licensing System** integration patterns
      - **Plugin development**: Check **Plugin system files** and existing plugins in `lib/plugins/`
-     - **Packaging/distribution**: Review **Packaging and Distribution** section for Habitat/Omnibus changes
+     - **Packaging/distribution**: Review **Packaging and Distribution** section for Habitat-based packaging changes
    - **Follow Coding Standards**:
      - Use **Code Style Guidelines** for Ruby version compatibility and string literals
      - Follow **Error Handling Patterns** for InSpec-specific exceptions
@@ -721,6 +647,5 @@ For Jira interactions, use the following MCP server functions:
 - `VERSION` file (managed by release process)
 - `.expeditor/` configuration (CI/CD automation)
 - `habitat/` packaging files (unless specifically required)
-- `omnibus/` packaging (unless specifically required)
 - `Gemfile.lock` (generated file)
 - Any files marked as auto-generated

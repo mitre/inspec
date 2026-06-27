@@ -4,7 +4,7 @@ This document describes the release process for Chef InSpec as used internally a
 
 ## Promote Dependency Gems
 
-It's important that you promote dependency gems - and thus release them to rubygems.org - BEFORE the last PR that you intend to release merges into inspec/inspec. This is because during the `inspec` merge process, software artifacts, such as omnibus packages, Habitat packages, and Docker images, are created that embed the dependencies. During promotion, these artifacts are simply promoted, rather than rebuilt. If you need a later version of one of these dependencies and have no legitimate PR to merge, you may need a dummy PR.
+It's important that you promote dependency gems - and thus release them to rubygems.org - BEFORE the last PR that you intend to release merges into inspec/inspec. This is because during the `inspec` merge process, software artifacts, such as Habitat packages and Docker images, are created that embed the dependencies. During promotion, these artifacts are simply promoted, rather than rebuilt. If you need a later version of one of these dependencies and have no legitimate PR to merge, you may need a dummy PR.
 
 ### Key Dependencies
 
@@ -53,24 +53,15 @@ Here are the Expeditor control labels, and the circumstances under which they sh
 * Expeditor: Bump Minor Version - Use when a significant new feature is being released.
 * Expeditor: Skip Changelog - Should only be used for dummy PRs.
 * Expeditor: Skip Version Bump - Use for non-code-change PRs, such as website or CI changes.
-* Expeditor: Skip Omnibus - Use for non-code-change PRs, such as website or CI changes.
 * Expeditor: Skip Habitat - Use for non-code-change PRs, such as website or CI changes.
 
 ### Click Merge
 
 This task should be straightforward, assuming the big merge button is green.
 
-You will see a message in #inspec-notify from Expeditor that it "performed actions for merged_inspec/inspec#1234" in this case for PR 1234. Among the messages will be links to the Omnibus and Habitat builds.
+You will see a message in #inspec-notify from Expeditor that it "performed actions for merged_inspec/inspec#1234" in this case for PR 1234. Among the messages will be links to the Habitat builds.
 
-You'll see a message in #inspec-notify from Expeditor that it "performed actions for merged_inspec/inspec#1234" (for PR 1234, for example). Among the messages will be links to the Omnibus and Habitat builds.
-
-### Watch Omnibus Build
-
-The Omnibus build creates operating-system-specific packages for each platform on which we release Chef InSpec. Its [expeditor configuration](https://github.com/inspec/inspec/blob/44fe144732e1e0abb2594957a880c5f1821e7774/.expeditor/config.yml#L133) drives a [Buildkite configuration](https://github.com/inspec/inspec/blob/main/.expeditor/release.omnibus.yml), which lists exactly which platforms to build.
-
-The Omnibus build is generally reliable, if somewhat slow.
-
-When the omnibus build succeeds, omnitruck delivers the packages to various package repos in `unstable` channels for public consumption.
+You'll see a message in #inspec-notify from Expeditor that it "performed actions for merged_inspec/inspec#1234" (for PR 1234, for example). Among the messages will be links to the Habitat builds.
 
 ### Watch Chef Habitat Build
 
@@ -97,16 +88,6 @@ The difference between the gems is as follows:
 * `inspec-core` is a library gem, with lightweight dependencies and no compilation required at install time, and is not encumbered by commercial licensing
 * `inspec-core-bin` contains an `inspec` executable and is encumbered by commercial licensing
 
-### Update Pending Release Notes
-
-As you merge each pull request, update the [Pending Release Notes](https://github.com/inspec/inspec/wiki/Pending-Release-Notes-v7). Some guidelines:
-
-* Do not include minor or non-customer visible changes, such as CI changes or test harness changes.
-* Do include bug fixes, features, and other things that impact the user.
-* Your words will be edited by the Docs team, but try help them along by keeping it human oriented; this isn't the technical-oriented CHANGELOG.
-* Add the PR number as a reference for the Docs team. They will typically remove them, but they may need to get more context by looking up the originating PR.
-* It's preferable to add notes as things merge, lest they be forgotten; sifting through a pile of merged PRs in a rush is a chore!
-
 ### Known Expeditor issues and resolutions
 
 Generally, expeditor issues and failures that appear unrelated to the InSpec PR should be flagged internally to `#releng-support` or `#expeditor-support`.
@@ -122,6 +103,8 @@ Occasionally there may be an unexplainable expeditor error. One thing to quickly
 Promotion should only be attempted if you have a set of green artifacts in #inspec-notify.
 
 ### Notify Docs Team
+
+InSpec release notes are published from the [chef-web-docs repository](https://github.com/chef/chef-web-docs/blob/main/content/release_notes/inspec.md).
 
 Let the Docs team (@docs-team) know that a release is planned and that editing of the release notes is needed. All content should be completed at least one day before release. The Docs team will polish up the words and remove any unused sections.
 
@@ -168,8 +151,6 @@ inspec/inspec:main performed the following actions for inspec 5.21.29 (stable) (
 • Executed .expeditor/announce-release.sh
 • Notified Slack channels of the artifact_published event
 ```
-
-Among other things, this promotion automatically generates [release notes](https://github.com/inspec/inspec/blob/main/.expeditor/publish-release-notes.sh) and [publishes them](https://github.com/inspec/inspec/blob/main/.expeditor/announce-release.sh) to Discourse.
 
 ### Update chef/homebrew-chef
 
