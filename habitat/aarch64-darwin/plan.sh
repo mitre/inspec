@@ -12,27 +12,39 @@ pkg_license=('Apache-2.0')
 pkg_deps=(
   core/coreutils
   core/git
-  core/ruby3_4-plus-devkit
+  core/ruby3_4
   core/bash
+  core/cacerts
 )
+# core/gcc is not available for aarch64-darwin; the macOS Xcode Command Line
+# Tools provide clang (aliased as gcc) for native gem compilation.
 pkg_build_deps=(
-  core/gcc
+  core/clang
   core/make
   core/readline
   core/sed
 )
 pkg_bin_dirs=(bin)
 
-do_prepare(){
+do_prepare() {
   export HAB_STUDIO_SECRET_NODE_OPTIONS="--dns-result-order=ipv4first"
+  # macOS Studio sandbox blocks access to the real user home directory.
+  # Set HOME to a writable, sandbox-accessible path so that Gem::SpecFetcher
+  # does not call File.stat on /Users/<user> and raise Errno::EPERM.
+  export HOME=/tmp
 }
 
 do_setup_environment() {
   build_line 'Setting GEM_HOME="$pkg_prefix/lib"'
   export GEM_HOME="$pkg_prefix/lib"
 
-  build_line "Setting GEM_PATH=$GEM_HOME:${INSPEC_CONFIG_DIR:-~/.inspec}"
-  export GEM_PATH="$GEM_HOME:${INSPEC_CONFIG_DIR:-~/.inspec}"
+  # Include core/ruby3_4's default gems dir so bundled gems (e.g. racc) are
+  # found when GEM_PATH is explicitly set — setting GEM_PATH suppresses Ruby's
+  # automatic inclusion of Gem.default_dir.
+  local _ruby_default_gems
+  _ruby_default_gems="$(pkg_path_for core/ruby3_4)/lib/ruby/gems/3.4.0"
+  build_line "Setting GEM_PATH=$GEM_HOME:$_ruby_default_gems:${INSPEC_CONFIG_DIR:-~/.inspec}"
+  export GEM_PATH="$GEM_HOME:$_ruby_default_gems:${INSPEC_CONFIG_DIR:-~/.inspec}"
 }
 
 do_unpack() {
@@ -61,7 +73,7 @@ do_install() {
     gem install inspec-*.gem --no-document
   popd
   pushd "$HAB_CACHE_SRC_PATH/$pkg_dirname/inspec-bin"
-    gem install inspec-bin*.gem --no-document
+    gem install "inspec-bin-${pkg_version}.gem" --no-document
   popd
 
   wrap_inspec_bin
@@ -90,25 +102,24 @@ do_install() {
 wrap_inspec_bin() {
   local bin="$pkg_prefix/bin/$pkg_name"
   local real_bin="$GEM_HOME/gems/inspec-bin-${pkg_version}/bin/inspec"
+  # ruby3_4 default gems dir so bundled gems (e.g. racc) are visible at runtime
+  local ruby_default_gems
+  ruby_default_gems="$(pkg_path_for core/ruby3_4)/lib/ruby/gems/3.4.0"
   build_line "Adding wrapper $bin to $real_bin"
   cat <<EOF > "$bin"
 #!$(pkg_path_for core/bash)/bin/bash
 set -e
 
 # Set binary path that allows InSpec to use non-Hab pkg binaries
-# core/ruby3_4-plus-devkit exports CC, MAKE, RUBY, BINUTILS_BIN via set_runtime_env.
-export PATH="$(dirname "$CC"):$BINUTILS_BIN:$(dirname "$MAKE"):/sbin:/usr/sbin:/usr/local/sbin:/usr/local/bin:/usr/bin:/bin:\$PATH"
-
-# CC, MAKE, RUBY are set via set_runtime_env in core/ruby3_4-plus-devkit
-# and baked in here at build time from the devkit's RUNTIME_ENVIRONMENT.
-export CC="$CC"
-export MAKE="$MAKE"
+export PATH="/sbin:/usr/sbin:/usr/local/sbin:/usr/local/bin:/usr/bin:/bin:\$PATH"
 
 # Set Ruby paths defined from 'do_setup_environment()'
 export GEM_HOME="$GEM_HOME"
 export GEM_PATH="$GEM_PATH"
+# SSL certificate verification - point OpenSSL to CA certificates
+export SSL_CERT_FILE="$(pkg_path_for core/cacerts)/ssl/certs/cacert.pem"
 
-exec $RUBY $real_bin \$@
+exec $(pkg_path_for core/ruby3_4)/bin/ruby $real_bin \$@
 EOF
   chmod -v 755 "$bin"
 }

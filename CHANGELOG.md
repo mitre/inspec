@@ -1,11 +1,7 @@
 # Change Log
 <!-- usage documentation: http://expeditor-docs.es.chef.io/configuration/changelog/ -->
 
-<!-- latest_release unreleased -->
-## Unreleased
-
-#### Merged Pull Requests
-- Remove install hooks and manual Ruby dependency installation to fix habitat build failure [#7937](https://github.com/inspec/inspec/pull/7937) ([Vasu1105](https://github.com/Vasu1105))
+<!-- latest_release -->
 <!-- latest_release -->
 
 ## [v6.4.48](https://github.com/inspec/inspec/tree/v6.4.48) (2023-08-22)
@@ -34,14 +30,30 @@
 #### Merged Pull Requests
 - Bump omnibus-software from `4b08f0b` to `3268356` in /omnibus [#6587](https://github.com/inspec/inspec/pull/6587) ([dependabot[bot]](https://github.com/dependabot[bot]))
 
-<!-- release_rollup since=7.1.7 -->
-### Changes since 7.1.7 release
-
-#### Merged Pull Requests
-- Remove install hooks and manual Ruby dependency installation to fix habitat build failure [#7937](https://github.com/inspec/inspec/pull/7937) ([Vasu1105](https://github.com/Vasu1105)) <!-- 7.1.7 -->
+<!-- release_rollup -->
 <!-- release_rollup -->
 
 <!-- latest_stable_release -->
+## [v7.2.1](https://github.com/inspec/inspec/tree/v7.2.1) (2026-09-02)
+
+#### Merged Pull Requests
+- Remove install hooks and manual Ruby dependency installation to fix habitat build failure [#7937](https://github.com/inspec/inspec/pull/7937) ([Vasu1105](https://github.com/Vasu1105))
+- FOREPORT: feat: CHEF-36276 - Add deprecation warning for --overwrite flag in inspec compliance plugin [#7974](https://github.com/inspec/inspec/pull/7974) ([Nik08](https://github.com/Nik08))
+- foreport: CHEF-33393 - Include WOW6432Node registry paths when os.arch is unknown [#7942](https://github.com/inspec/inspec/pull/7942) ([Nik08](https://github.com/Nik08))
+- feat: CHEF-34343 - Add aarch64-linux Habitat package support [#7968](https://github.com/inspec/inspec/pull/7968) ([mohan-progress](https://github.com/mohan-progress))
+- fix CHEF-36239 : Prevent GemReader from matching vendored profiles [#7962](https://github.com/inspec/inspec/pull/7962) ([Vasu1105](https://github.com/Vasu1105))
+- fix: CHEF-36278 - Fix Docker/Podman resource fallback with --auto-install-gems [#7976](https://github.com/inspec/inspec/pull/7976) ([Nik08](https://github.com/Nik08))
+- Fix build pipeline issue [#7981](https://github.com/inspec/inspec/pull/7981) ([mohan-progress](https://github.com/mohan-progress))
+- chore: Update train and train-core dependencies to &gt;= 3.16.5 [#7980](https://github.com/inspec/inspec/pull/7980) ([Nik08](https://github.com/Nik08))
+- Bump chef-licensing from 1.4.0 to 1.4.1 [#7983](https://github.com/inspec/inspec/pull/7983) ([dependabot[bot]](https://github.com/dependabot[bot]))
+- Initial effort in AI poc work [#7965](https://github.com/inspec/inspec/pull/7965) ([Nik08](https://github.com/Nik08))
+- feat: CHEF-29956 - Add aarch64-darwin Habitat package and CI pipeline support [#7987](https://github.com/inspec/inspec/pull/7987) ([mohan-progress](https://github.com/mohan-progress))
+- CHEF-36279 Linux hab plan changes with ruby-34-devkit [#7979](https://github.com/inspec/inspec/pull/7979) ([Nik08](https://github.com/Nik08))
+- InSpec 7: CHEF-34794 Copilot Skill for release notes [#7964](https://github.com/inspec/inspec/pull/7964) ([Nik08](https://github.com/Nik08))
+- CHEF-37474 - Updated Gemfile.lock with train-kubernetes [#7995](https://github.com/inspec/inspec/pull/7995) ([Nik08](https://github.com/Nik08))
+- Updated NOTICE.txt for InSpec version 7.2 [#7996](https://github.com/inspec/inspec/pull/7996) ([Nik08](https://github.com/Nik08))
+<!-- latest_stable_release -->
+
 ## [v7.1.7](https://github.com/inspec/inspec/tree/v7.1.7) (2026-05-11)
 
 #### Merged Pull Requests
@@ -61,7 +73,6 @@
 - train train-core upgrade [#7897](https://github.com/inspec/inspec/pull/7897) ([mohan-progress](https://github.com/mohan-progress))
 - Upgrade ERb &amp; ZLIB gem at package level [#7895](https://github.com/inspec/inspec/pull/7895) ([chandra-progress](https://github.com/chandra-progress))
 - Updated NOTICE file for 7.1 release [#7903](https://github.com/inspec/inspec/pull/7903) ([Nik08](https://github.com/Nik08))
-<!-- latest_stable_release -->
 
 ## [v7.0.107](https://github.com/inspec/inspec/tree/v7.0.107) (2026-02-23)
 
