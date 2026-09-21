@@ -24,6 +24,22 @@ module Inspec::Resources
       end
     EXAMPLE
 
+    CONTAINER_SYSTEMS = %w{
+      container-other
+      docker
+      kubepods
+      linux-vserver
+      lxc
+      lxc-libvirt
+      openvz
+      podman
+      pouch
+      proot
+      rkt
+      systemd-nspawn
+      wsl
+    }.freeze
+
     def initialize
       # TODO: no need for hashie here... in fact, no reason for a hash at all
       @virtualization_data = Hashie::Mash.new
@@ -52,6 +68,10 @@ module Inspec::Resources
 
     def physical_system?
       @virtualization_data[:physical]
+    end
+
+    def container_system?
+      @virtualization_data[:role] == "guest" && CONTAINER_SYSTEMS.include?(@virtualization_data[:system])
     end
 
     def params
@@ -240,6 +260,36 @@ module Inspec::Resources
       true
     end
 
+    def detect_kubernetes_container
+      return false unless kubernetes_service_account_mounted? || kubernetes_mountinfo? || kubernetes_env?
+
+      @virtualization_data[:system] = "kubepods"
+      @virtualization_data[:role] = "guest"
+      true
+    end
+
+    def kubernetes_service_account_mounted?
+      inspec.file("/var/run/secrets/kubernetes.io/serviceaccount").exist? ||
+        inspec.file("/run/secrets/kubernetes.io/serviceaccount").exist?
+    end
+
+    def kubernetes_mountinfo?
+      return false unless inspec.file("/proc/self/mountinfo").exist?
+
+      mountinfo = inspec.file("/proc/self/mountinfo").content.to_s
+      mountinfo.include?("kubepods") ||
+        mountinfo.include?("/var/lib/kubelet/pods/") ||
+        mountinfo.include?("kubernetes.io~") ||
+        mountinfo.include?("/var/run/secrets/kubernetes.io/serviceaccount")
+    end
+
+    def kubernetes_env?
+      return false unless inspec.file("/proc/1/environ").exist?
+
+      environ = inspec.file("/proc/1/environ").content.to_s
+      environ.include?("KUBERNETES_SERVICE_HOST=")
+    end
+
     def detect_docker
       return false unless inspec.file("/.dockerenv").exist? || inspec.file("/.dockerinit").exist?
 
@@ -297,6 +347,20 @@ module Inspec::Resources
       true
     end
 
+    # Detect virtualization via systemd-detect-virt
+    def detect_systemd_virt
+      cmd = inspec.command("systemd-detect-virt")
+      return false unless cmd.exist?
+      return false unless cmd.exit_status == 0
+
+      detected = cmd.stdout.to_s.strip
+      return false if detected.empty?
+
+      @virtualization_data[:system] = detected
+      @virtualization_data[:role] = "guest"
+      true
+    end
+
     def collect_data_linux
       # This avoids doing multiple detections in a single test
       return unless @virtualization_data.empty?
@@ -304,6 +368,7 @@ module Inspec::Resources
       # each detect method will return true if it matched and was successfully
       # able to populate @virtualization_data with stuff.
       return if detect_xen
+      return if detect_kubernetes_container
       return if detect_docker
       return if detect_virtualbox
       return if detect_lxd
@@ -316,6 +381,7 @@ module Inspec::Resources
       return if detect_parallels
       return if detect_vmware
       return if detect_hyperv
+      return if detect_systemd_virt
     end
 
     def windows_computer_system
