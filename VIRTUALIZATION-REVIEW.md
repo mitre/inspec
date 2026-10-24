@@ -10,8 +10,16 @@ the first draft's cgroup patterns (`wip:virt.rb:795,813`), the EC2 fallback retu
 setting `system` (`wip:virt.rb:944-952`), and `in_kubernetes_pod?` treating node paths as pod signals
 (`wip:virt.rb:612-627`). All four are as stated.
 
-One correction: where this review says "CHANGELOG entry", InSpec's `CONTRIBUTING.md:45` says
-`CHANGELOG.md` is generated when a PR merges. Behaviour changes are declared in the PR description.
+Corrections made after the review:
+- Where this review says "CHANGELOG entry", InSpec's `CONTRIBUTING.md:45` says `CHANGELOG.md` is
+  generated when a PR merges. Behaviour changes are declared in the PR description.
+- This review says `command(...).exist?` is always false under `MockLoader` (`command.rb:77`). That is
+  wrong: line 77 returns false only when the OS name is nil or `"mock"`. On a Linux `MockLoader`
+  (`MockLoader.new(:ubuntu)`, OS name `"ubuntu"`) `exist?` runs `sh -c 'type "<cmd>"'`
+  (`command.rb:79-84`) and is true when that command is mocked with exit 0, the pattern InSpec's own
+  mock table uses (`test/helpers/mock_loader.rb:225-229`). So `nova` (OpenStack) and `lxc-version`
+  (LXC host) are testable without stubbing private methods. The OpenStack row (S16) was hand-traced and
+  its conclusion stands.
 
 Notation: `main:virt.rb:N` = `main:lib/inspec/resources/virtualization.rb:N`; `wip:virt.rb:N` = same path on `al/virtualization-enhancement`; `PR.md` = `VIRTUALIZATION-ENHANCEMENT-PR.md` on the first-draft ref; `docs:N` = `docs-chef-io/content/inspec/resources/virtualization.md` (unchanged on the first draft, `git diff --stat main al/... -- docs-chef-io/` is empty).
 
@@ -30,7 +38,7 @@ Hard results first:
 1. **breaking — `resource_id` for "nothing detected" changes `"virtualization"` → `"physical-system"`.**
    `main:virt.rb:63` `@virtualization_data[:system] || "virtualization"` vs `wip:virt.rb:239` `@data[:system] || "physical-system"`. `resource_id` is emitted in the JSON reporter (`lib/inspec/reporters/json.rb:50,55-64`) and schema (`lib/inspec/schema/exec_json.rb:41`) and is pinned by the existing unit test (`main:test/unit/resources/virtualization_test.rb:35`). Core convention is "identifier or the resource's own name": `platform.rb:97` `@platform.name || "platform"`, `os.rb:31` `@platform.name || "OS"`, `kernel_parameter.rb:33`, `service.rb:301`, `users.rb:311`; docs say resource_id is "the unique identifier for a resource" (`docs-chef-io/content/inspec/profiles/custom_resources.md:82-83`). `"physical-system"` also asserts a conclusion the docs explicitly warn is unreliable: "For unsupported virtualization platforms this can result in false positives" (`docs:77`). Triggers: every bare-metal/undetected host, and every Windows physical host.
 
-2. **breaking — `openstack` detection removed entirely.** `main:virt.rb:124-131,315` (`nova` binary ⇒ `system "openstack"`, `role "host"`); the first draft has no occurrence of `openstack`/`nova`. Docs list `openstack (host role only)` (`docs:90`). Hand-traced (cannot mock `command.exist?` in MockLoader: `lib/inspec/resources/command.rb:77` returns false on mock): main ⇒ `openstack`/`host`; first draft ⇒ `nil`/`nil`, `physical_system? == true`.
+2. **breaking — `openstack` detection removed entirely.** `main:virt.rb:124-131,315` (`nova` binary ⇒ `system "openstack"`, `role "host"`); the first draft has no occurrence of `openstack`/`nova`. Docs list `openstack (host role only)` (`docs:90`). Hand-traced (the harness did not mock `sh -c 'type "nova"'`; see the correction at the top): main ⇒ `openstack`/`host`; first draft ⇒ `nil`/`nil`, `physical_system? == true`.
 
 3. **breaking — `kubepods` system value removed.** `main:virt.rb:223-225` sets `system "kubepods"` for a `kubepods` cgroup. The first draft never produces it; same input ⇒ `system "container"`, `k8s_distribution "vanilla"` (`wip:virt.rb:585-598`; harness S3). Any profile with `only_if { virtualization.system == 'kubepods' }` silently stops matching. The value is not in the docs list (`docs:83-95`) but it has shipped since `cd893ce1e`.
 
@@ -127,7 +135,7 @@ Detection order: both are first-match-wins (`main:virt.rb:306-318`; `wip:virt.rb
 - `resource_id` fallback: resource's own name/stable label (`platform.rb:96-98`, `os.rb:30-32`, `sys_info.rb:115-117`, `kernel_parameter.rb:32-34`; base returns `""` when unset, `lib/inspec/resource.rb:37-41`). main's `"virtualization"` conforms; `"physical-system"` does not and encodes a claim the docs qualify (`docs:77`).
 - `system` names and roles are enumerated in `docs:79-103` (Linux: docker, hyper-v, kvm, linux vserver, lxc/lxd, openstack host-only, openvz, parallels, virtualbox, vmware, xen; Windows: hyper-v, kvm, vmware, virtualbox, xen). The first draft drops `openstack`, renames Windows `virtualbox`, and adds undocumented values (`container`, `containerd`, `cri-o`, `runc`, `utm`) with no docs change.
 - `virtual_system?` = "a guest was detected" (`docs:73`); `physical_system?` = "no virtualization platform is detected" (`docs:77`). The first draft's fallback branches violate both (finding 5).
-- Unit-test convention: `MockLoader`, Train mock where unmocked files do not exist and unmocked commands exit 1 (`mock.rb:112-124`); `command.exist?` is always false under mock (`command.rb:77`), so `which`-style checks must be mocked as commands.
+- Unit-test convention: `MockLoader`, Train mock where unmocked files do not exist and unmocked commands exit 1 (`mock.rb:112-124`); `command(...).exist?` runs `sh -c 'type "<cmd>"'` on a Linux `MockLoader` and is mocked as that command (corrected, see top).
 
 ## 4. New detections on their own terms
 
@@ -177,7 +185,7 @@ Regression tests pinning main (must pass unchanged on `main` first):
 17. `/proc/self/status` `VxID: 0` ⇒ vserver/host; `VxID: 42` ⇒ vserver/guest.
 18. DMI `VMware Virtual Platform` ⇒ vmware/guest.
 19. DMI `Virtual Machine\n` ⇒ hyper-v/guest.
-20. openstack: stub `Inspec::Resources::Virtualization#nova_exists?` (or refactor to a mockable command) ⇒ openstack/host.
+20. openstack: mock `sh -c 'type "nova"'` with exit 0 (see the correction at the top) ⇒ openstack/host.
 21. Windows: `Model "Virtual Machine"` ⇒ hyper-v/guest; `Model "VMware Virtual Platform"` ⇒ vmware; `Model "VirtualBox"` ⇒ `virtualbox`; `Manufacturer "Xen"` ⇒ xen; `Manufacturer "QEMU"` ⇒ kvm (the last two are new behaviour vs main's symbol-key bug and are declared in the PR description); unknown ⇒ nil/`"virtualization"`/`physical_system? true`; WMI failure ⇒ decide and pin (skip vs physical).
 22. "host also runs containers" pins: KVM host with `/proc/self/cgroup` root-only ⇒ kvm/host; VMware guest with `/var/snap/lxd` ⇒ vmware/guest; VMware guest with `/etc/nomad.d` ⇒ vmware/guest; k8s node (`/etc/kubernetes`, `/var/lib/kubelet`, `/run/containerd`) on a KVM guest ⇒ kvm/guest, `kubernetes? == false`.
 

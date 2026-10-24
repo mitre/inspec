@@ -133,6 +133,67 @@ an absent-by-default helper.
 4. **Unverified items from the review:** the `lxd` snap on Ubuntu Server images; Compose environment
    variables; metadata-server error bodies; timeout behaviour on blocked link-local routes.
 
+## References
+
+Line numbers are at InSpec 7.3.4 (`main` at `2183c4506`) and train-core 3.16.5. Re-check them if
+`main` moves.
+
+### Code to port from
+
+- First draft: branch `al/virtualization-enhancement`, commit `52e30ce79` (on `origin`, reference only,
+  never opened as a PR). `VIRTUALIZATION-REVIEW.md` cites it as `wip:virt.rb:N`. Port a detector only
+  after the review finding for it is addressed.
+- Current resource: `lib/inspec/resources/virtualization.rb`. Detection chain `collect_data_linux`
+  (order: xen, docker, virtualbox, lxd, container, linux-vserver, kvm from cpuinfo, kvm from sys,
+  openvz, openstack, parallels, vmware, hyper-v); Windows `collect_data_windows` and
+  `windows_computer_system` (called twice; the `[:manufacturer]` symbol-key bug).
+
+### InSpec resource lifecycle and errors
+
+- `lib/inspec/exceptions.rb:8-9`: `Inspec::Exceptions::ResourceFailed`, `ResourceSkipped`.
+- `lib/inspec/resource.rb:47-69`: `supersuper_initialize` wraps only the resource's `initialize`.
+  `ResourceSkipped` → skipped (`:61`), `ResourceFailed` → failed (`:63`), `NoMethodError` → skipped
+  (`:67`). An exception raised later, inside a property read in an `its` block, is a plain test error.
+- `lib/inspec/resource.rb:71-82`: `check_supported!` raises `ArgumentError` ("Unsupported
+  resource/backend combination") off-platform, except on Train's mock backend (`:76`).
+- `lib/inspec/runner.rb:349-366`: the runner reports a skipped resource before a failed one.
+- `lib/inspec/utils/filter.rb:7` (`ExceptionCatcher`), `:423`: FilterTable methods catch both
+  exceptions.
+- `lib/inspec/utils/file_reader.rb:10-19`: core's precedent: a missing, unreadable or empty source is
+  `ResourceSkipped`.
+- `lib/inspec/resources/command.rb:75-94`: `command(...).exist?` is false only when the OS name is nil
+  or `"mock"`; on Linux it runs `sh -c 'type "<cmd>"'` (`which` on Alpine), on Windows `Get-Command`.
+
+### Conventions
+
+- `resource_id` fallback is the resource's own name: `platform.rb:97` (`|| "platform"`), `os.rb:31`
+  (`|| "OS"`), `sys_info.rb:116`. It is emitted in JSON results (`lib/inspec/reporters/json.rb:50-60`).
+- `docs-chef-io/content/inspec/profiles/custom_resources.md`: custom resource API, `resource_id`,
+  raising `ResourceSkipped`.
+- `docs-chef-io/content/inspec/resources/virtualization.md`: the public contract: `system` names
+  (§"virtualization.system names"), `virtual_system?` and `physical_system?` (§Matchers).
+- `dev-docs/filtertable-internals.md`: FilterTable behaviour, if a layer ever exposes a table.
+
+### Unit-test helpers
+
+- `test/helpers/mock_loader.rb:47` `MockLoader.new(os)`; OS table at `:3` (`ubuntu` `:23`, `windows`
+  `:26`); `load_resource` `:743`; `MockLoader.mock_command` `:757`.
+- Command-existence mocks in InSpec's own table: `mock_loader.rb:225-229`
+  (`'sh -c \'type "pip"\'' => empty.call`).
+- Train mock (`train-core/lib/train/transports/mock.rb`): `mock_command` `:108`; unmocked command exits 1
+  (`command_not_found` `:112-119`); unmocked file does not exist (`File#initialize`, `@exist = false`
+  `:175`); lookup `run_command_via_connection` `:133` (keys by the SHA256 of the command; the raw string
+  is found through Train's command cache, so set both or use `MockLoader.mock_command`).
+- Existing tests: `test/unit/resources/virtualization_test.rb`. Scenario list:
+  `virtualization-review-harness.rb` (run: `bundle exec ruby -Ilib -Itest virtualization-review-harness.rb`).
+
+### Contributing and checks
+
+- `CONTRIBUTING.md:49` and following: DCO, every commit signed off (`git commit -s`).
+- `CONTRIBUTING.md:45`: `CHANGELOG.md` is generated at merge; do not edit it.
+- `Rakefile:41-47`: `bundle exec rake test:lint` runs chefstyle (RuboCop); `bundle exec rake test:unit`
+  runs the unit suite.
+
 ## Author
 
 Aaron Lippold
